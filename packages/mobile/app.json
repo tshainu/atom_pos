@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "icon": "./assets/icon.png",
+    "android": {
+      "package": "com.atompos_k7x2.runable",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#00B5A5"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "extra": {
+      "apiUrl": "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site/"
+    },
+    "ios": {
+      "bundleIdentifier": "com.atompos_k7x2.runable",
+      "supportsTablet": true
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#00B5A5"
+    },
+    "name": "ATOM POS",
+    "slug": "atom-pos",
+    "version": "1.0.0",
+    "scheme": "atom-pos",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
