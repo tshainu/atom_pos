@@ -371,6 +371,105 @@ const app = new Hono()
   })
 
   // ── Reports / Dashboard ───────────────────────────────────
+  .get("/reports/sales-chart", async (c) => {
+    const shopId = c.req.query("shopId");
+    const range = c.req.query("range") ?? "today"; // today | week | month | lastmonth | year | custom
+    const from = c.req.query("from"); // ISO string for custom
+    const to = c.req.query("to");     // ISO string for custom
+    if (!shopId) return c.json({ error: "shopId required" }, 400);
+
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = new Date(now);
+    let groupBy: "hour" | "day" | "month" = "day";
+
+    if (range === "today") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      endDate = new Date(startDate.getTime() + 86400000);
+      groupBy = "hour";
+    } else if (range === "week") {
+      const day = now.getDay();
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+      endDate = new Date(startDate.getTime() + 7 * 86400000);
+      groupBy = "day";
+    } else if (range === "month") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      groupBy = "day";
+    } else if (range === "lastmonth") {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      endDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      groupBy = "day";
+    } else if (range === "year") {
+      startDate = new Date(now.getFullYear(), 0, 1);
+      endDate = new Date(now.getFullYear() + 1, 0, 1);
+      groupBy = "month";
+    } else if (range === "custom" && from && to) {
+      startDate = new Date(from);
+      endDate = new Date(to);
+      const diffDays = (endDate.getTime() - startDate.getTime()) / 86400000;
+      groupBy = diffDays <= 2 ? "hour" : diffDays <= 90 ? "day" : "month";
+    } else {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      endDate = new Date(startDate.getTime() + 86400000);
+      groupBy = "hour";
+    }
+
+    const sales = await db
+      .select({ netPay: schema.sales.netPay, createdAt: schema.sales.createdAt })
+      .from(schema.sales)
+      .where(
+        and(
+          eq(schema.sales.shopId, Number(shopId)),
+          eq(schema.sales.status, "completed"),
+          sql`created_at >= ${Math.floor(startDate.getTime() / 1000)}`,
+          sql`created_at < ${Math.floor(endDate.getTime() / 1000)}`
+        )
+      );
+
+    // Build bucket map
+    const buckets: Record<string, number> = {};
+
+    if (groupBy === "hour") {
+      for (let h = 0; h < 24; h++) buckets[String(h).padStart(2, "0") + ":00"] = 0;
+      for (const s of sales) {
+        const d = new Date(s.createdAt instanceof Date ? s.createdAt : (s.createdAt as number) * 1000);
+        const key = String(d.getHours()).padStart(2, "0") + ":00";
+        buckets[key] = (buckets[key] ?? 0) + s.netPay;
+      }
+    } else if (groupBy === "day") {
+      const cur = new Date(startDate);
+      while (cur < endDate) {
+        const key = `${cur.getMonth() + 1}/${cur.getDate()}`;
+        buckets[key] = 0;
+        cur.setDate(cur.getDate() + 1);
+      }
+      for (const s of sales) {
+        const d = new Date(s.createdAt instanceof Date ? s.createdAt : (s.createdAt as number) * 1000);
+        const key = `${d.getMonth() + 1}/${d.getDate()}`;
+        if (key in buckets) buckets[key] = (buckets[key] ?? 0) + s.netPay;
+      }
+    } else {
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (cur < endDate) {
+        buckets[months[cur.getMonth()]] = 0;
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      for (const s of sales) {
+        const d = new Date(s.createdAt instanceof Date ? s.createdAt : (s.createdAt as number) * 1000);
+        const key = months[d.getMonth()];
+        if (key in buckets) buckets[key] = (buckets[key] ?? 0) + s.netPay;
+      }
+    }
+
+    const points = Object.entries(buckets).map(([label, value]) => ({ label, value }));
+    const totalSales = sales.reduce((sum, s) => sum + s.netPay, 0);
+    const totalBills = sales.length;
+
+    return c.json({ points, totalSales, totalBills, groupBy }, 200);
+  })
+
   .get("/reports/summary", async (c) => {
     const shopId = c.req.query("shopId");
     if (!shopId) return c.json({ error: "shopId required" }, 400);

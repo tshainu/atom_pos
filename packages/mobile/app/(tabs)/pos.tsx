@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, FlatList, Modal, Alert, ActivityIndicator, Dimensions,
+  TextInput, FlatList, Modal, Alert, ActivityIndicator, Dimensions, Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +12,7 @@ import { colors, spacing, radius } from "../../lib/theme";
 const { width } = Dimensions.get("window");
 
 interface PriceGroup { id: number; label: string; price: number; }
-interface Item { id: number; name: string; category: string; priceGroups: PriceGroup[]; }
+interface Item { id: number; name: string; category: string; iconUrl?: string | null; priceGroups: PriceGroup[]; }
 interface BillItem { itemId: number; itemName: string; qty: number; pricePerItem: number; total: number; }
 
 const ITEM_ICONS: Record<string, string> = {
@@ -57,11 +57,16 @@ export default function POSScreen() {
     const u = await getUser();
     setUser(u);
     if (!u) return;
-    const data = await apiFetch(`items?shopId=${u.shopId}`);
-    if (!data.error) {
-      setItems(data.items);
-      const cats = ["All", ...Array.from(new Set<string>(data.items.map((i: Item) => i.category)))];
-      setCategories(cats);
+    const [itemsData, catsData] = await Promise.all([
+      apiFetch(`items?shopId=${u.shopId}`),
+      apiFetch(`categories?shopId=${u.shopId}`),
+    ]);
+    if (!itemsData.error) setItems(itemsData.items);
+    if (!catsData.error) {
+      setCategories(["All", ...catsData.categories.map((c: { name: string }) => c.name)]);
+    } else if (!itemsData.error) {
+      // fallback: derive from items
+      setCategories(["All", ...Array.from(new Set<string>(itemsData.items.map((i: Item) => i.category)))]);
     }
     setLoading(false);
   };
@@ -170,7 +175,11 @@ export default function POSScreen() {
           return (
             <TouchableOpacity style={styles.itemCard} onPress={() => openItemModal(item)}>
               <View style={styles.itemIconBox}>
-                <Ionicons name={iconName} size={26} color={colors.primary} />
+                {item.iconUrl ? (
+                  <Image source={{ uri: item.iconUrl }} style={styles.itemIconImg} />
+                ) : (
+                  <Ionicons name={iconName} size={26} color={colors.primary} />
+                )}
               </View>
               <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
               <Text style={styles.itemPrice}>Rs.{item.priceGroups[0]?.price.toLocaleString() ?? "—"}</Text>
@@ -256,10 +265,14 @@ export default function POSScreen() {
             {/* Item icon + name + qty stepper */}
             <View style={styles.modalItemRow}>
               <View style={styles.modalItemIconBox}>
-                <Ionicons
-                  name={(ITEM_ICONS[selectedItem?.category ?? ""] ?? ITEM_ICONS.default) as any}
-                  size={26} color="#E6A817"
-                />
+                {selectedItem?.iconUrl ? (
+                  <Image source={{ uri: selectedItem.iconUrl }} style={styles.itemIconImg} />
+                ) : (
+                  <Ionicons
+                    name={(ITEM_ICONS[selectedItem?.category ?? ""] ?? ITEM_ICONS.default) as any}
+                    size={26} color="#E6A817"
+                  />
+                )}
               </View>
               <Text style={styles.modalItemName}>{selectedItem?.name}</Text>
               <TouchableOpacity onPress={() => setModalQty((q) => Math.max(1, q - 1))}>
@@ -467,9 +480,11 @@ const styles = StyleSheet.create({
     shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
   itemIconBox: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 48, height: 48, borderRadius: 10,
     backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center", marginBottom: 5,
+    overflow: "hidden",
   },
+  itemIconImg: { width: 48, height: 48, borderRadius: 10 },
   itemName: { fontSize: 11, fontWeight: "600", color: "#333", textAlign: "center", marginBottom: 2 },
   itemPrice: { fontSize: 11, fontWeight: "700", color: colors.primary },
   emptyText: { textAlign: "center", color: colors.textSecondary, fontSize: 12, padding: 20 },
