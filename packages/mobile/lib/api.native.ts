@@ -1,6 +1,5 @@
 import { hc } from "hono/client";
 import Constants from "expo-constants";
-import type { AppType } from "@template/web";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const rawUrl =
@@ -9,7 +8,8 @@ const rawUrl =
   "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site";
 
 const baseUrl = rawUrl.replace(/\/$/, "");
-const client = hc<AppType>(baseUrl);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const client = hc<any>(baseUrl);
 export const api = client.api;
 
 export async function apiFetch(path: string, options: RequestInit = {}) {

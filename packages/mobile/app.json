@@ -6,11 +6,14 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#00B5A5"
-      },
-      "edgeToEdgeEnabled": true
+      }
     },
     "extra": {
-      "apiUrl": "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site/"
+      "apiUrl": "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site/",
+      "router": {},
+      "eas": {
+        "projectId": "6d37e41f-f7c2-44cb-8068-2b08e615a344"
+      }
     },
     "ios": {
       "bundleIdentifier": "com.atompos_k7x2.runable",
@@ -27,13 +30,14 @@
     "scheme": "atom-pos",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "owner": "tshainu"
   }
 }
