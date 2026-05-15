@@ -85,6 +85,68 @@ export default function ItemsScreen() {
     const firstPrice = item.priceGroups?.[0]?.price ?? 0;
     const priceFormatted = `Rs. ${firstPrice.toLocaleString()}`;
 
+    // --- Inline CODE128B barcode generator (no CDN needed) ---
+    const CODE128B_CHARS: Record<string, number> = {};
+    " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~".split("").forEach((c, i) => { CODE128B_CHARS[c] = i + 32; });
+    const CODE128_PATTERNS: Record<number, string> = {
+      0:"11011001100",1:"11001101100",2:"11001100110",3:"10010011000",4:"10010001100",
+      5:"10001001100",6:"10011001000",7:"10011000100",8:"10001100100",9:"11001001000",
+      10:"11001000100",11:"11000100100",12:"10110011100",13:"10011011100",14:"10011001110",
+      15:"10111001100",16:"10011101100",17:"10011100110",18:"11001110010",19:"11001011100",
+      20:"11001001110",21:"11011100100",22:"11001110100",23:"11101101110",24:"11101001100",
+      25:"11100101100",26:"11100100110",27:"11101100100",28:"11100110100",29:"11100110010",
+      30:"11011011000",31:"11011000110",32:"11000110110",33:"10100011000",34:"10001011000",
+      35:"10001000110",36:"10110001000",37:"10001101000",38:"10001100010",39:"11010001000",
+      40:"11000101000",41:"11000100010",42:"10110111000",43:"10110001110",44:"10001101110",
+      45:"10111011000",46:"10111000110",47:"10001110110",48:"11101110110",49:"11010001110",
+      50:"11000101110",51:"11011101000",52:"11011100010",53:"11011101110",54:"11101011000",
+      55:"11101000110",56:"11100010110",57:"11101101000",58:"11101100010",59:"11100011010",
+      60:"11101111010",61:"11001000010",62:"11110001010",63:"10100110000",64:"10100001100",
+      65:"10010110000",66:"10010000110",67:"10000101100",68:"10000100110",69:"10110010000",
+      70:"10110000100",71:"10011010000",72:"10011000010",73:"10000110100",74:"10000110010",
+      75:"11000010010",76:"11001010000",77:"11110111010",78:"11000010100",79:"10001111010",
+      80:"10100111100",81:"10010111100",82:"10010011110",83:"10111100100",84:"10011110100",
+      85:"10011110010",86:"11110100100",87:"11110010100",88:"11110010010",89:"11011011110",
+      90:"11011110110",91:"11110110110",92:"10101111000",93:"10100011110",94:"10001011110",
+      95:"10111101000",96:"10111100010",97:"10011101110",98:"10011110110",99:"11110110010",
+      100:"11010111000",101:"11010001100",102:"11010001110",103:"11010011100",104:"11000111010",
+      105:"11010111010",106:"1100011101011",
+    };
+    const encodeCode128B = (text: string): string => {
+      let checksum = 104; // START B value
+      let encoded = CODE128_PATTERNS[104]; // START B
+      for (let i = 0; i < text.length; i++) {
+        const code = CODE128B_CHARS[text[i]];
+        if (code === undefined) continue;
+        checksum += (i + 1) * code;
+        encoded += CODE128_PATTERNS[code] ?? "";
+      }
+      encoded += CODE128_PATTERNS[checksum % 103] ?? "";
+      encoded += CODE128_PATTERNS[106]; // STOP
+      return encoded;
+    };
+    const buildBarcodeSVG = (text: string): string => {
+      const barW = 1.5;
+      const barH = 36;
+      const bits = encodeCode128B(text);
+      const totalW = bits.length * barW;
+      let rects = "";
+      let x = 0;
+      let i = 0;
+      while (i < bits.length) {
+        const bit = bits[i];
+        let run = 1;
+        while (i + run < bits.length && bits[i + run] === bit) run++;
+        if (bit === "1") {
+          rects += `<rect x="${x}" y="0" width="${run * barW}" height="${barH}" fill="#000"/>`;
+        }
+        x += run * barW;
+        i += run;
+      }
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${barH}" viewBox="0 0 ${totalW} ${barH}">${rects}</svg>`;
+    };
+    const barcodeSVG = buildBarcodeSVG(barcodeValue);
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -137,7 +199,7 @@ export default function ItemsScreen() {
     justify-content: center;
     flex: 1;
   }
-  #barcode {
+  .barcode-wrap svg {
     max-width: 35mm;
     height: 9mm;
   }
@@ -155,23 +217,9 @@ export default function ItemsScreen() {
   <div class="shop-name">${shopName}</div>
   <div class="item-name">${item.name}</div>
   <div class="price">${priceFormatted}</div>
-  <div class="barcode-wrap">
-    <svg id="barcode"></svg>
-  </div>
+  <div class="barcode-wrap">${barcodeSVG}</div>
   <div class="sku-text">${barcodeValue}</div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-<script>
-  JsBarcode("#barcode", "${barcodeValue}", {
-    format: "CODE128",
-    width: 1.5,
-    height: 34,
-    displayValue: false,
-    margin: 0,
-    background: "#ffffff",
-    lineColor: "#000000",
-  });
-</script>
 </body>
 </html>`;
 
