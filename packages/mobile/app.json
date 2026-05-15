@@ -1,29 +1,5 @@
 {
   "expo": {
-    "icon": "./assets/icon.png",
-    "android": {
-      "package": "com.atompos_k7x2.runable",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#00B5A5"
-      }
-    },
-    "extra": {
-      "apiUrl": "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site/",
-      "router": {},
-      "eas": {
-        "projectId": "6d37e41f-f7c2-44cb-8068-2b08e615a344"
-      }
-    },
-    "ios": {
-      "bundleIdentifier": "com.atompos_k7x2.runable",
-      "supportsTablet": true
-    },
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#00B5A5"
-    },
     "name": "ATOM POS",
     "slug": "atom-pos",
     "version": "1.0.0",
@@ -31,6 +7,29 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-bg.jpg",
+      "resizeMode": "cover",
+      "backgroundColor": "#00B5A5"
+    },
+    "android": {
+      "package": "com.atompos_k7x2.runable",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#00B5A5"
+      },
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.atompos_k7x2.runable",
+      "supportsTablet": true
+    },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
@@ -38,6 +37,13 @@
     "plugins": [
       "expo-router"
     ],
-    "owner": "tshainu"
+    "extra": {
+      "apiUrl": "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site/",
+      "router": {},
+      "eas": {
+        "projectId": "7df212a0-990d-41e2-8eb6-2dc08c905d6d"
+      }
+    },
+    "owner": "tshainut"
   }
 }

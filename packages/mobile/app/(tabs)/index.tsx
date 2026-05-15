@@ -6,10 +6,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { getUser } from "../../lib/auth";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, cachedFetchAsync } from "../../lib/api";
+import { cacheInvalidate } from "../../lib/cache";
 import { colors, spacing, radius } from "../../lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Polyline, Line, Text as SvgText, Circle, Rect, Defs, LinearGradient, Stop } from "react-native-svg";
+import AnnouncementBanner from "../../components/AnnouncementBanner";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CHART_W = SCREEN_W - 48;
@@ -165,6 +167,7 @@ export default function DashboardScreen() {
   const [user, setUser] = useState<any>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [todayData, setTodayData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [chartLoading, setChartLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -177,35 +180,54 @@ export default function DashboardScreen() {
   const [pendingTo, setPendingTo] = useState("");
 
   const loadSummary = async (u: any) => {
-    const data = await apiFetch(`reports/summary?shopId=${u.shopId}`);
-    if (!data.error) setSummary(data);
+    try {
+      const data = await cachedFetchAsync(`reports/summary?shopId=${u.shopId}`);
+      if (data && !data.error) setSummary(data);
+    } catch (_) {}
   };
 
-  const loadChart = async (u: any, r: RangeKey, cf = customFrom, ct = customTo) => {
-    setChartLoading(true);
+  const loadToday = async (u: any) => {
+    try {
+      const data = await cachedFetchAsync(`reports/today?shopId=${u.shopId}`);
+      if (data && !data.error) setTodayData(data);
+    } catch (_) {}
+  };
+
+  const loadChart = async (u: any, r: RangeKey, cf = customFrom, ct = customTo, force = false) => {
     let url = `reports/sales-chart?shopId=${u.shopId}&range=${r}`;
     if (r === "custom" && cf && ct) url += `&from=${cf}T00:00:00&to=${ct}T23:59:59`;
-    const data = await apiFetch(url);
-    if (!data.error) setChartData(data);
+    if (force) cacheInvalidate(url);
+    setChartLoading(true);
+    try {
+      const data = await cachedFetchAsync(url);
+      if (data && !data.error) setChartData(data);
+    } catch (_) {}
     setChartLoading(false);
   };
 
-  const load = async () => {
-    const u = await getUser();
-    setUser(u);
-    if (u) {
-      await Promise.all([loadSummary(u), loadChart(u, range)]);
-    }
+  const load = async (force = false) => {
+    try {
+      const u = await getUser();
+      setUser(u);
+      if (u) {
+        if (force) {
+          cacheInvalidate(`reports/summary?shopId=${u.shopId}`);
+          cacheInvalidate(`reports/today?shopId=${u.shopId}`);
+        }
+        await Promise.all([loadSummary(u), loadChart(u, range, customFrom, customTo, force), loadToday(u)]).catch(() => {});
+      }
+    } catch (_) {}
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, []));
+  // Focus: silently refresh stale data in background — no full-screen spinner
+  useFocusEffect(useCallback(() => { load(false); }, []));
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
+    await load(true); // force fresh on pull-to-refresh
     setRefreshing(false);
   };
 
@@ -230,30 +252,55 @@ export default function DashboardScreen() {
     if (user) loadChart(user, "custom", pendingFrom, pendingTo);
   };
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  // Only show skeleton on very first load (no cached data at all)
+  if (loading && !summary && !todayData) {
+    return (
+      <SafeAreaView style={styles.safe} edges={[]}>
+        <View style={{ padding: spacing.md, gap: 12 }}>
+          <View style={styles.skeletonCard} />
+          <View style={styles.skeletonCardHalf} />
+          <View style={styles.skeletonBlock} />
+          <View style={styles.skeletonBlock} />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const maxStaff = summary?.staffSales.reduce((m, s) => Math.max(m, s.total), 1) ?? 1;
   const activeRange = RANGES.find((r) => r.key === range);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["bottom"]}>
+    <SafeAreaView style={styles.safe} edges={[]}>
       <ScrollView
         style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        {/* Summary Cards */}
+        {/* Shop Name Header */}
+        {user?.shopName ? (
+          <View style={styles.shopNameHeader}>
+            <Text style={styles.shopNameText}>{user.shopName}</Text>
+          </View>
+        ) : null}
+
+        {/* Announcements */}
+        <AnnouncementBanner />
+
+        {/* Today's Summary Cards */}
         <View style={styles.cardsRow}>
           <View style={[styles.card, styles.cardPrimary]}>
-            <Text style={styles.cardLabel}>Total Sales</Text>
-            <Text style={styles.cardValue}>Rs.{(summary?.totalSales ?? 0).toLocaleString()}</Text>
-            <Text style={styles.cardSub}>{summary?.totalBills ?? 0} bills</Text>
+            <Text style={styles.cardLabel}>Today's Collection</Text>
+            <Text style={styles.cardValue}>
+              Rs.{(todayData?.todayCollection ?? 0).toLocaleString()}
+            </Text>
+            <Text style={styles.cardSub}>
+              Sales: Rs.{(todayData?.totalSales ?? 0).toLocaleString()} · Debt: Rs.{(todayData?.totalCollections ?? 0).toLocaleString()}
+            </Text>
           </View>
           <View style={[styles.card, styles.cardGreen]}>
-            <Text style={styles.cardLabel}>Items Sold</Text>
-            <Text style={styles.cardValue}>{summary?.totalItems ?? 0}</Text>
-            <Text style={styles.cardSub}>units</Text>
+            <Text style={styles.cardLabel}>Today's Items Sold</Text>
+            <Text style={styles.cardValue}>{todayData?.totalItemsSold ?? 0}</Text>
+            <Text style={styles.cardSub}>units sold today</Text>
           </View>
         </View>
 
@@ -262,7 +309,7 @@ export default function DashboardScreen() {
           {/* Header row */}
           <View style={styles.chartHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Sales Graph</Text>
+              <Text style={styles.sectionTitle}>Sales Insight</Text>
               {chartData && (
                 <Text style={styles.chartMeta}>
                   Rs.{chartData.totalSales.toLocaleString()} · {chartData.totalBills} bills
@@ -403,6 +450,14 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
 
+  // Skeleton
+  skeletonCard: { height: 90, borderRadius: radius.lg, backgroundColor: "#e8e8e8" },
+  skeletonCardHalf: { height: 60, borderRadius: radius.lg, backgroundColor: "#e8e8e8", width: "60%" },
+  skeletonBlock: { height: 140, borderRadius: radius.lg, backgroundColor: "#e8e8e8" },
+
+  shopNameHeader: { paddingHorizontal: spacing.md, paddingTop: 0, paddingBottom: 0 },
+  shopNameText: { fontSize: 13, fontWeight: "700", color: colors.textSecondary, letterSpacing: 0.5 },
+
   cardsRow: { flexDirection: "row", padding: spacing.md, gap: 12 },
   card: { flex: 1, borderRadius: radius.lg, padding: spacing.md, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
   cardPrimary: { backgroundColor: colors.primary },
@@ -431,7 +486,7 @@ const styles = StyleSheet.create({
   rangeChipActive: { borderColor: colors.primary, backgroundColor: "#f0fff0" },
   rangeChipText: { fontSize: 12, fontWeight: "600", color: "#666" },
   rangeChipTextActive: { color: "#2e7d32", fontWeight: "700" },
-  chartArea: { minHeight: CHART_H },
+  chartArea: {},
   chartLoader: { height: CHART_H, alignItems: "center", justifyContent: "center" },
 
   tabRow: {

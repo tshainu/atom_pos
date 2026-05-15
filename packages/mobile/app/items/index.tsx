@@ -8,8 +8,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getUser } from "../../lib/auth";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { colors, spacing, radius } from "../../lib/theme";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 
 const SWIPE_THRESHOLD = 60;
 const ACTION_WIDTH = 180; // total revealed width for 3 actions
@@ -41,10 +43,13 @@ export default function ItemsScreen() {
   const load = async () => {
     const u = await getUser();
     setUser(u);
-    if (!u) return;
-    const data = await apiFetch(`items?shopId=${u.shopId}`);
-    if (!data.error) setItems(data.items);
-    setLoading(false);
+    if (!u) { setLoading(false); return; }
+    const cached = await cachedFetchAsync(`items?shopId=${u.shopId}`);
+    if (cached && !cached.error) { setItems(cached.items ?? []); setLoading(false); }
+    apiFetch(`items?shopId=${u.shopId}`).then((data) => {
+      if (!data.error) setItems(data.items ?? []);
+      setLoading(false);
+    });
   };
 
   useFocusEffect(useCallback(() => { load(); }, []));
@@ -74,8 +79,122 @@ export default function ItemsScreen() {
     i.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  const generateBarcodeLabel = async (item: Item) => {
+    const shopName = user?.shopName ?? "Shop";
+    const barcodeValue = item.sku && item.sku.trim() ? item.sku.trim() : item.id.toString();
+    const firstPrice = item.priceGroups?.[0]?.price ?? 0;
+    const priceFormatted = `Rs. ${firstPrice.toLocaleString()}`;
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  @page { size: 38mm 25mm; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 38mm; height: 25mm; overflow: hidden; }
+  .label {
+    width: 38mm;
+    height: 25mm;
+    padding: 1.2mm 1.5mm 1mm 1.5mm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #fff;
+  }
+  .shop-name {
+    font-size: 7pt;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    text-align: center;
+    color: #111;
+    line-height: 1.1;
+  }
+  .item-name {
+    font-size: 6pt;
+    font-weight: 500;
+    text-align: center;
+    color: #333;
+    line-height: 1.1;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .price {
+    font-size: 9pt;
+    font-weight: 900;
+    text-align: center;
+    color: #000;
+    line-height: 1;
+  }
+  .barcode-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+  }
+  #barcode {
+    max-width: 35mm;
+    height: 9mm;
+  }
+  .sku-text {
+    font-size: 6.5pt;
+    font-weight: 700;
+    color: #222;
+    text-align: center;
+    letter-spacing: 0.5pt;
+  }
+</style>
+</head>
+<body>
+<div class="label">
+  <div class="shop-name">${shopName}</div>
+  <div class="item-name">${item.name}</div>
+  <div class="price">${priceFormatted}</div>
+  <div class="barcode-wrap">
+    <svg id="barcode"></svg>
+  </div>
+  <div class="sku-text">${barcodeValue}</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script>
+  JsBarcode("#barcode", "${barcodeValue}", {
+    format: "CODE128",
+    width: 1.5,
+    height: 34,
+    displayValue: false,
+    margin: 0,
+    background: "#ffffff",
+    lineColor: "#000000",
+  });
+</script>
+</body>
+</html>`;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html, width: 143, height: 94 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `Label: ${item.name}` });
+      } else {
+        Alert.alert("Saved", `Label saved to: ${uri}`);
+      }
+    } catch (e: any) {
+      Alert.alert("Error", e?.message ?? "Failed to generate label");
+    }
+  };
+
+  if (loading && items.length === 0) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        <View style={{ padding: 16, gap: 10 }}>
+          {[1,2,3,4,5].map((i) => <View key={i} style={{ height: 64, borderRadius: 12, backgroundColor: "#e8e8e8" }} />)}
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -113,7 +232,7 @@ export default function ItemsScreen() {
             onClose={() => setOpenId(null)}
             onEdit={() => { setOpenId(null); router.push({ pathname: "/items/edit", params: { id: item.id } }); }}
             onDelete={() => deleteItem(item)}
-            onBarcode={() => { setOpenId(null); Alert.alert("Barcode", `Generate barcode for "${item.name}" — coming soon`); }}
+            onBarcode={() => { setOpenId(null); generateBarcodeLabel(item); }}
           />
         )}
         ListEmptyComponent={

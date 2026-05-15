@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -10,14 +11,22 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Dimensions,
+  StatusBar,
 } from "react-native";
 import { router } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { saveSession } from "../lib/auth";
 import { apiFetch } from "../lib/api";
-import { colors, spacing, radius } from "../lib/theme";
+
+const { width: SW, height: SH } = Dimensions.get("window");
+const TEAL = "#2BBFB3";
+const HEADER_H = SH * 0.28;
+
+const splashBg = require("../assets/splash-bg.jpg");
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const [shopId, setShopId] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -48,38 +57,47 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.headerAtom}>ATOM</Text>
-        <Text style={styles.headerPos}>POS</Text>
+    <View style={styles.root}>
+      <StatusBar barStyle="light-content" backgroundColor={TEAL} translucent />
+
+      {/* ── HEADER: splash bg + atom logo ── */}
+      <View style={[styles.header, { height: HEADER_H + insets.top }]}>
+        <Image source={splashBg} style={styles.headerBg} resizeMode="cover" />
+        {/* bottom white wave */}
+        <View style={styles.wave} />
       </View>
+
+      {/* ── FORM ── */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.flex}
       >
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Sign In</Text>
-            <Text style={styles.cardSub}>Enter your credentials to continue</Text>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.body, { paddingBottom: insets.bottom + 32 }]}>
+            <Text style={styles.signIn}>Sign in !</Text>
 
             <Text style={styles.label}>Shop ID</Text>
             <TextInput
               style={styles.input}
               value={shopId}
               onChangeText={setShopId}
-              placeholder="e.g. SHOP001"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor="#bbb"
               autoCapitalize="characters"
+              autoCorrect={false}
             />
 
-            <Text style={styles.label}>Username</Text>
+            <Text style={styles.label}>User name</Text>
             <TextInput
               style={styles.input}
               value={username}
               onChangeText={setUsername}
-              placeholder="Enter username"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor="#bbb"
               autoCapitalize="none"
+              autoCorrect={false}
             />
 
             <Text style={styles.label}>Password</Text>
@@ -87,105 +105,115 @@ export default function LoginScreen() {
               style={styles.input}
               value={password}
               onChangeText={setPassword}
-              placeholder="Enter password"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor="#bbb"
               secureTextEntry
             />
 
             <TouchableOpacity
-              style={[styles.btn, loading && { opacity: 0.7 }]}
+              style={[styles.loginBtn, loading && { opacity: 0.75 }]}
               onPress={handleLogin}
               disabled={loading}
+              activeOpacity={0.85}
             >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.btnText}>Login</Text>
-              )}
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.loginBtnText}>Login</Text>
+              }
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.forgotWrap} activeOpacity={0.7}>
+              <Text style={styles.forgotText}>Forgot shop ID or Password</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.primary },
+  root: { flex: 1, backgroundColor: "#fff" },
+  flex: { flex: 1 },
+
+  // ── header ──
   header: {
-    alignItems: "center",
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.primary,
+    width: SW,
+    overflow: "hidden",
+    backgroundColor: TEAL,
   },
-  headerAtom: {
-    fontSize: 42,
-    fontWeight: "900",
-    color: "#fff",
-    letterSpacing: 6,
+  headerBg: {
+    position: "absolute",
+    top: 0, left: 0,
+    width: SW,
+    height: HEADER_H + 100,
   },
-  headerPos: {
-    fontSize: 18,
-    fontWeight: "300",
-    color: "rgba(255,255,255,0.8)",
-    letterSpacing: 10,
-    marginTop: -6,
+  // white rounded bottom edge
+  wave: {
+    position: "absolute",
+    bottom: -30,
+    left: -SW * 0.1,
+    width: SW * 1.2,
+    height: 60,
+    backgroundColor: "#fff",
+    borderRadius: 50,
   },
-  scroll: {
-    flexGrow: 1,
-    justifyContent: "flex-start",
-    padding: spacing.md,
+
+  // ── body ──
+  body: {
+    paddingHorizontal: 32,
+    paddingTop: 24,
+    backgroundColor: "#fff",
   },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginTop: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  cardSub: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
+  signIn: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#1a1a1a",
+    textAlign: "center",
+    marginBottom: 22,
   },
   label: {
     fontSize: 13,
-    fontWeight: "600",
-    color: colors.textPrimary,
+    color: "#555",
     marginBottom: 6,
-    marginTop: 4,
+    marginTop: 2,
   },
   input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: TEAL,
+    borderRadius: 50,
+    height: 48,
+    paddingHorizontal: 18,
     fontSize: 15,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-    backgroundColor: "#FAFAFA",
+    color: "#222",
+    marginBottom: 14,
+    backgroundColor: "#fff",
   },
-  btn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
+  loginBtn: {
+    backgroundColor: "#1B5E20",
+    borderRadius: 50,
     paddingVertical: 14,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 10,
+    marginBottom: 18,
+    marginHorizontal: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-  btnText: {
+  loginBtnText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+  forgotWrap: {
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  forgotText: {
+    color: "#666",
+    fontSize: 13,
   },
 });

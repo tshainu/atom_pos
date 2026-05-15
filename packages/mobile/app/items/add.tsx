@@ -8,7 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getUser } from "../../lib/auth";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { colors } from "../../lib/theme";
 
 interface PriceTier { id: number; price: string; }
@@ -47,15 +47,22 @@ export default function AddItemScreen() {
   const loadCategories = async () => {
     try {
       const u = await getUser();
-      const data = await apiFetch(`categories?shopId=${u?.shopId}`);
-      if (data.categories) {
-        setCategories(data.categories);
-        if (data.categories.length > 0 && !selectedCategory) {
-          setSelectedCategory(data.categories[0].name);
-        }
+      // Show cached immediately
+      const cached = await cachedFetchAsync(`categories?shopId=${u?.shopId}`);
+      if (cached?.categories) {
+        setCategories(cached.categories);
+        if (cached.categories.length > 0 && !selectedCategory) setSelectedCategory(cached.categories[0].name);
+        setLoadingCats(false);
       }
-    } catch {}
-    setLoadingCats(false);
+      // Refresh in background
+      apiFetch(`categories?shopId=${u?.shopId}`).then((data) => {
+        if (data.categories) {
+          setCategories(data.categories);
+          if (data.categories.length > 0 && !selectedCategory) setSelectedCategory(data.categories[0].name);
+        }
+        setLoadingCats(false);
+      });
+    } catch { setLoadingCats(false); }
   };
 
   const addCategory = async () => {
@@ -157,6 +164,8 @@ export default function AddItemScreen() {
     setSaving(true);
     try {
       const u = await getUser();
+
+      // Save item immediately — no waiting for icon
       const data = await apiFetch("items", {
         method: "POST",
         body: JSON.stringify({
@@ -164,7 +173,7 @@ export default function AddItemScreen() {
           name: name.trim(),
           category: selectedCategory || "General",
           commission: parseFloat(commission) || 0,
-          iconUrl: iconUri,
+          iconUrl: iconUri ?? null,
           priceGroups: validPrices.map((t, i) => ({
             label: `Price ${i + 1}`,
             price: parseFloat(t.price),
@@ -172,9 +181,29 @@ export default function AddItemScreen() {
         }),
       });
       if (data.error) { Alert.alert("Error", data.error); return; }
+
+      const savedItemId = data.item?.id;
       setSavedSku(data.item?.sku ?? null);
       setSuccess(true);
-      setTimeout(() => { router.back(); }, 2000);
+      setTimeout(() => { router.back(); }, 1500);
+
+      // Generate icon in background — patch item silently when done
+      if (!iconUri && savedItemId) {
+        apiFetch("items/generate-icon", {
+          method: "POST",
+          body: JSON.stringify({
+            name: name.trim(),
+            category: selectedCategory || "General",
+          }),
+        }).then((aiData) => {
+          if (aiData?.iconUrl) {
+            apiFetch(`items/${savedItemId}`, {
+              method: "PATCH",
+              body: JSON.stringify({ iconUrl: aiData.iconUrl }),
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
     } catch {
       Alert.alert("Error", "Failed to save item");
     } finally {
@@ -492,6 +521,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     paddingVertical: 12, paddingHorizontal: 40,
     backgroundColor: "#4CAF50", borderRadius: 8, alignItems: "center",
+    flexDirection: "row", justifyContent: "center",
   },
   saveBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
   cancelBtn: {

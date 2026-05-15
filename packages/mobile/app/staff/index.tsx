@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getUser } from "../../lib/auth";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { colors, spacing, radius } from "../../lib/theme";
 
 interface StaffUser {
@@ -39,13 +39,21 @@ export default function StaffScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<any>(null);
 
-  const load = async () => {
+  const load = async (force = false) => {
     const u = await getUser();
     setUser(u);
-    if (!u) return;
-    const data = await apiFetch(`users?shopId=${u.shopId}`);
-    if (!data.error) setStaff(data.users);
-    setLoading(false);
+    if (!u) { setLoading(false); return; }
+    // Show cached immediately, fetch fresh in background
+    const cached = await cachedFetchAsync(`users?shopId=${u.shopId}`, force ? 0 : undefined);
+    if (cached && !cached.error) { setStaff(cached.users ?? []); setLoading(false); }
+    if (!force) {
+      apiFetch(`users?shopId=${u.shopId}`).then((data) => {
+        if (!data.error) setStaff(data.users ?? []);
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
   };
 
   useFocusEffect(useCallback(() => { load(); }, []));
@@ -74,8 +82,16 @@ export default function StaffScreen() {
     s.role.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading && staff.length === 0) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        <View style={{ padding: spacing.md, gap: 10 }}>
+          {[1,2,3,4].map((i) => (
+            <View key={i} style={{ height: 70, borderRadius: 12, backgroundColor: "#e8e8e8" }} />
+          ))}
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (

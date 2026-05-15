@@ -30,6 +30,11 @@ export default function RootLayout() {
             <Stack.Screen name="staff/add" options={{ title: "Add Staff" }} />
             <Stack.Screen name="staff/edit" options={{ title: "Edit Staff" }} />
             <Stack.Screen name="staff/view" options={{ title: "Staff Details" }} />
+            <Stack.Screen name="users/index" options={{ title: "User Management" }} />
+            <Stack.Screen name="drawer" options={{ headerShown: false }} />
+            <Stack.Screen name="settings/index" options={{ title: "Settings" }} />
+            <Stack.Screen name="settings/printer" options={{ title: "Printer Settings" }} />
+            <Stack.Screen name="settings/business" options={{ title: "Business Information" }} />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

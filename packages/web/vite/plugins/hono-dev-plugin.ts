@@ -5,6 +5,11 @@ export default function honoDevPlugin(): Plugin {
     name: "hono-dev-server",
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
+        // SPA fallback: serve index.html for /admin/* so deep links work via platform proxy
+        if (req.url?.startsWith("/admin") && !req.url.startsWith("/api")) {
+          req.url = "/";
+          return next();
+        }
         if (!req.url?.startsWith("/api")) return next();
 
         try {
@@ -27,7 +32,9 @@ export default function honoDevPlugin(): Plugin {
 }
 
 async function loadApp(server: ViteDevServer) {
-  const mod = await server.ssrLoadModule("/src/api/index.ts");
+  // resolve relative to the web package root (works regardless of vite root)
+  const apiPath = new URL("../../src/api/index.ts", import.meta.url).pathname;
+  const mod = await server.ssrLoadModule(apiPath);
   return mod.default;
 }
 

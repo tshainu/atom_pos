@@ -9,8 +9,9 @@ export default function mobileStaticPlugin(): Plugin {
     name: "mobile-static",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        // Skip API routes
+        // Skip API and admin routes
         if (req.url?.startsWith("/api")) return next();
+        if (req.url?.startsWith("/admin")) return next();
 
         const urlPath = req.url?.split("?")[0] ?? "/";
         let filePath = path.join(distDir, urlPath);
