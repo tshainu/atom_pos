@@ -617,7 +617,7 @@ export default function POSScreen() {
       if (ps.receiptHeader) text += ALIGN_CENTER + SIZE_NORMAL + ps.receiptHeader + "\r\n";
       text += ALIGN_LEFT + SEP_HEAVY + "\r\n";
       const payLabel = rd.isCredit ? "Credit" : (rd.paymentMethod.charAt(0).toUpperCase() + rd.paymentMethod.slice(1));
-      text += `Bill: ${rd.billNumber}   ${rd.printedAt}\r\n`;
+      text += `Bill: ${rd.billNumber.replace("BILL-","")}   ${rd.printedAt}\r\n`;
       text += `Payment: ${payLabel}\r\n`;
       // Items table header
       const hNum = "No.".padEnd(3);
@@ -1513,46 +1513,45 @@ export default function POSScreen() {
                       const total = `Rs.${it.total.toLocaleString()}`;
                       const line1 = `${num}${name}${qty}  ${price}`;
                       const line2 = `${"".padEnd(nameCol + 3)}Total: ${total}`;
-                      return `${line1}\n${line2}`;
-                    }).join("\n");
+                      return `${line1}\r\n${line2}`;
+                    }).join("\r\n");
 
-                    // Pull content up ~0.75 inch by minimizing top feed after RESET
-                    const TIGHT_SPACING = `${ESC}3\x18`; // 24 dots per line
-                    const NORMAL_SPACING = `${ESC}2`;    // restore default (30 dots)
+                    const NORMAL_SPACING = `${ESC}2`;
                     let text = RESET + `${ESC}3\x00` + ALIGN_CENTER;
-                    // Shop name — bold, centered
-                    text += BOLD_ON + nameSize + receiptData.shopName + "\n" + SIZE_NORMAL + BOLD_OFF + NORMAL_SPACING;
-                    // Address & phone — bold, centered
-                    if (receiptData.shopAddress) text += ALIGN_CENTER + BOLD_ON + addrSize + receiptData.shopAddress + SIZE_NORMAL + BOLD_OFF + "\n";
-                    if (receiptData.shopPhone) text += ALIGN_CENTER + BOLD_ON + addrSize + "Tel: " + receiptData.shopPhone + SIZE_NORMAL + BOLD_OFF + "\n";
-                    text += ALIGN_LEFT + SEP_LIGHT + "\n";
-                    // Receipt header — centered
-                    if (ps.receiptHeader) text += ALIGN_CENTER + SIZE_NORMAL + ps.receiptHeader + "\n";
-                    text += ALIGN_LEFT + SEP_HEAVY + "\n";
+                    text += BOLD_ON + nameSize + receiptData.shopName + "\r\n" + SIZE_NORMAL + BOLD_OFF + NORMAL_SPACING;
+                    if (receiptData.shopAddress) text += ALIGN_CENTER + BOLD_ON + addrSize + receiptData.shopAddress + SIZE_NORMAL + BOLD_OFF + "\r\n";
+                    if (receiptData.shopPhone) text += ALIGN_CENTER + BOLD_ON + addrSize + "Tel: " + receiptData.shopPhone + SIZE_NORMAL + BOLD_OFF + "\r\n";
+                    text += ALIGN_LEFT + SEP_LIGHT + "\r\n";
+                    if (ps.receiptHeader) text += ALIGN_CENTER + SIZE_NORMAL + ps.receiptHeader + "\r\n";
+                    text += ALIGN_LEFT + SEP_HEAVY + "\r\n";
                     const pmLabel = receiptData.isCredit ? "Credit" : (receiptData.paymentMethod.charAt(0).toUpperCase() + receiptData.paymentMethod.slice(1));
-                    text += `Bill: ${receiptData.billNumber}   ${receiptData.printedAt}   ${pmLabel}\n`;
-                    text += SEP_LIGHT + "\n";
-                    text += itemLines + "\n";
-                    text += SEP_LIGHT + "\n";
+                    text += `Bill: ${receiptData.billNumber.replace("BILL-","")}   ${receiptData.printedAt}\r\n`;
+                    text += `Payment: ${pmLabel}\r\n`;
+                    // Item table header
+                    const rHdr = is80 ? "No. " + "Item".padEnd(18) + " Qty  Price" : "No. " + "Item".padEnd(12) + " Qty  Price";
+                    text += SEP_LIGHT + "\r\n";
+                    text += BOLD_ON + rHdr + BOLD_OFF + "\r\n";
+                    text += SEP_LIGHT + "\r\n";
+                    text += itemLines + "\r\n";
+                    text += SEP_LIGHT + "\r\n";
                     const pad = is80 ? 32 : 20;
-                    text += `Subtotal:`.padEnd(pad) + `Rs.${receiptData.subtotal.toLocaleString()}\n`;
-                    if (receiptData.discount > 0) text += `Discount:`.padEnd(pad) + `-Rs.${receiptData.discount.toLocaleString()}\n`;
-                    text += BOLD_ON + `Total Payable:`.padEnd(pad) + `Rs.${receiptData.netPay.toLocaleString()}` + BOLD_OFF + "\n";
+                    text += `Subtotal:`.padEnd(pad) + `Rs.${receiptData.subtotal.toLocaleString()}\r\n`;
+                    if (receiptData.discount > 0) text += `Discount:`.padEnd(pad) + `-Rs.${receiptData.discount.toLocaleString()}\r\n`;
+                    text += BOLD_ON + `Total Payable:`.padEnd(pad) + `Rs.${receiptData.netPay.toLocaleString()}` + BOLD_OFF + "\r\n";
                     if (!receiptData.isCredit) {
-                      text += BOLD_ON + `Total Paid:`.padEnd(pad) + `Rs.${receiptData.cashPaid.toLocaleString()}` + BOLD_OFF + "\n";
-                      text += BOLD_ON + `Balance:`.padEnd(pad) + `Rs.${receiptData.balance.toLocaleString()}` + BOLD_OFF + "\n";
+                      text += BOLD_ON + `Total Paid:`.padEnd(pad) + `Rs.${receiptData.cashPaid.toLocaleString()}` + BOLD_OFF + "\r\n";
+                      text += BOLD_ON + `Balance:`.padEnd(pad) + `Rs.${receiptData.balance.toLocaleString()}` + BOLD_OFF + "\r\n";
                     }
                     if (receiptData.isCredit) {
-                      text += SEP_LIGHT + "\n";
-                      text += BOLD_ON + center("** CREDIT SALE **") + BOLD_OFF + "\n";
-                      text += `Customer: ${receiptData.customerName ?? ""}\n`;
-                      if (receiptData.customerPhone) text += `Phone:    ${receiptData.customerPhone}\n`;
-                      if (receiptData.creditDate) text += `Due Date: ${receiptData.creditDate}\n`;
+                      text += SEP_LIGHT + "\r\n";
+                      text += BOLD_ON + center("** CREDIT SALE **") + BOLD_OFF + "\r\n";
+                      text += `Customer: ${receiptData.customerName ?? ""}\r\n`;
+                      if (receiptData.customerPhone) text += `Phone:    ${receiptData.customerPhone}\r\n`;
+                      if (receiptData.creditDate) text += `Due Date: ${receiptData.creditDate}\r\n`;
                     }
-                    text += SEP_HEAVY + "\n";
-                    // Receipt footer (custom, above ATOM line)
-                    if (ps.receiptFooter) text += ALIGN_CENTER + ps.receiptFooter + "\n";
-                    text += ALIGN_CENTER + "ATOM POS by AxisXNOR\n\n\n\n\n\n";
+                    text += SEP_HEAVY + "\r\n";
+                    if (ps.receiptFooter) text += ALIGN_CENTER + ps.receiptFooter + "\r\n";
+                    text += ALIGN_CENTER + "ATOM POS by AxisXNOR\r\n\r\n\r\n\r\n\r\n\r\n";
                     text += "\x1d\x56\x00";
 
                     if (ps.printerType === "bluetooth") {
