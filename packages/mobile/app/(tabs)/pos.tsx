@@ -606,38 +606,45 @@ export default function POSScreen() {
         const qty = `x${it.qty}`.padStart(4);
         const price = `Rs.${(it.pricePerItem ?? (it.qty ? it.total / it.qty : it.total)).toLocaleString()}`;
         const total = `Rs.${it.total.toLocaleString()}`;
-        return `${num}${name}${qty}  ${price}\n${"".padEnd(nc + 3)}Total: ${total}`;
-      }).join("\n");
+        return `${num}${name}${qty}  ${price}\r\n${"".padEnd(nc + 3)}Total: ${total}`;
+      }).join("\r\n");
       const NORMAL_SPACING = `${ESC}2`;
       let text = RESET + `${ESC}3\x00` + ALIGN_CENTER;
-      text += BOLD_ON + nameSize + rd.shopName + "\n" + SIZE_NORMAL + BOLD_OFF + NORMAL_SPACING;
-      if (rd.shopAddress) text += ALIGN_CENTER + BOLD_ON + addrSize + rd.shopAddress + SIZE_NORMAL + BOLD_OFF + "\n";
-      if (rd.shopPhone) text += ALIGN_CENTER + BOLD_ON + addrSize + "Tel: " + rd.shopPhone + SIZE_NORMAL + BOLD_OFF + "\n";
-      text += ALIGN_LEFT + SEP_LIGHT + "\n";
-      if (ps.receiptHeader) text += ALIGN_CENTER + SIZE_NORMAL + ps.receiptHeader + "\n";
-      text += ALIGN_LEFT + SEP_HEAVY + "\n";
+      text += BOLD_ON + nameSize + rd.shopName + "\r\n" + SIZE_NORMAL + BOLD_OFF + NORMAL_SPACING;
+      if (rd.shopAddress) text += ALIGN_CENTER + BOLD_ON + addrSize + rd.shopAddress + SIZE_NORMAL + BOLD_OFF + "\r\n";
+      if (rd.shopPhone) text += ALIGN_CENTER + BOLD_ON + addrSize + "Tel: " + rd.shopPhone + SIZE_NORMAL + BOLD_OFF + "\r\n";
+      text += ALIGN_LEFT + SEP_LIGHT + "\r\n";
+      if (ps.receiptHeader) text += ALIGN_CENTER + SIZE_NORMAL + ps.receiptHeader + "\r\n";
+      text += ALIGN_LEFT + SEP_HEAVY + "\r\n";
       const payLabel = rd.isCredit ? "Credit" : (rd.paymentMethod.charAt(0).toUpperCase() + rd.paymentMethod.slice(1));
-      text += `Bill: ${rd.billNumber}   ${rd.printedAt}\n`;
-      text += `Payment: ${payLabel}\n`;
-      text += SEP_LIGHT + "\n" + itemLines + "\n" + SEP_LIGHT + "\n";
+      text += `Bill: ${rd.billNumber}   ${rd.printedAt}\r\n`;
+      text += `Payment: ${payLabel}\r\n`;
+      // Items table header
+      const hNum = "No.".padEnd(3);
+      const hName = (is80 ? "Item".padEnd(18) : "Item".padEnd(12));
+      const hQty = " Qty";
+      const hPrice = "  Price";
+      text += SEP_LIGHT + "\r\n";
+      text += BOLD_ON + `${hNum}${hName}${hQty}${hPrice}` + BOLD_OFF + "\r\n";
+      text += SEP_LIGHT + "\r\n" + itemLines.replace(/\n/g, "\r\n") + "\r\n" + SEP_LIGHT + "\r\n";
       const padW = is80 ? 32 : 20;
-      text += `Subtotal:`.padEnd(padW) + `Rs.${rd.subtotal.toLocaleString()}\n`;
-      if (rd.discount > 0) text += `Discount:`.padEnd(padW) + `-Rs.${rd.discount.toLocaleString()}\n`;
-      text += BOLD_ON + `Total Payable:`.padEnd(padW) + `Rs.${rd.netPay.toLocaleString()}` + BOLD_OFF + "\n";
+      text += `Subtotal:`.padEnd(padW) + `Rs.${rd.subtotal.toLocaleString()}\r\n`;
+      if (rd.discount > 0) text += `Discount:`.padEnd(padW) + `-Rs.${rd.discount.toLocaleString()}\r\n`;
+      text += BOLD_ON + `Total Payable:`.padEnd(padW) + `Rs.${rd.netPay.toLocaleString()}` + BOLD_OFF + "\r\n";
       if (!rd.isCredit) {
-        text += BOLD_ON + `Total Paid:`.padEnd(padW) + `Rs.${rd.cashPaid.toLocaleString()}` + BOLD_OFF + "\n";
-        text += BOLD_ON + `Balance:`.padEnd(padW) + `Rs.${rd.balance.toLocaleString()}` + BOLD_OFF + "\n";
+        text += BOLD_ON + `Total Paid:`.padEnd(padW) + `Rs.${rd.cashPaid.toLocaleString()}` + BOLD_OFF + "\r\n";
+        text += BOLD_ON + `Balance:`.padEnd(padW) + `Rs.${rd.balance.toLocaleString()}` + BOLD_OFF + "\r\n";
       }
       if (rd.isCredit) {
-        text += SEP_LIGHT + "\n";
-        text += BOLD_ON + center("** CREDIT SALE **") + BOLD_OFF + "\n";
-        if (rd.customerName) text += `Customer: ${rd.customerName}\n`;
-        if ((rd as any).customerPhone) text += `Phone:    ${(rd as any).customerPhone}\n`;
-        if ((rd as any).creditDate) text += `Due Date: ${(rd as any).creditDate}\n`;
+        text += SEP_LIGHT + "\r\n";
+        text += BOLD_ON + center("** CREDIT SALE **") + BOLD_OFF + "\r\n";
+        if (rd.customerName) text += `Customer: ${rd.customerName}\r\n`;
+        if ((rd as any).customerPhone) text += `Phone:    ${(rd as any).customerPhone}\r\n`;
+        if ((rd as any).creditDate) text += `Due Date: ${(rd as any).creditDate}\r\n`;
       }
-      text += SEP_HEAVY + "\n";
-      if (ps.receiptFooter) text += ALIGN_CENTER + ps.receiptFooter + "\n";
-      text += ALIGN_CENTER + "ATOM POS by AxisXNOR\n\n\n\n\n\n";
+      text += SEP_HEAVY + "\r\n";
+      if (ps.receiptFooter) text += ALIGN_CENTER + ps.receiptFooter + "\r\n";
+      text += ALIGN_CENTER + "ATOM POS by AxisXNOR\r\n\r\n\r\n\r\n\r\n\r\n";
       text += "\x1d\x56\x00";
       if (ps.printerType === "bluetooth") {
         if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
