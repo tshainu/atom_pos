@@ -149,6 +149,33 @@ export default function PrinterSettingsScreen() {
   };
 
   const testPrint = async () => {
+    if (settings.printerType === "bluetooth") {
+      if (!settings.printerAddress) {
+        Alert.alert("No Printer", "Select a Bluetooth printer first.");
+        return;
+      }
+
+      // Check BT permissions before attempting — missing perms = native crash
+      if (Platform.OS === "android") {
+        try {
+          const granted = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          ]);
+          const ok =
+            granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] === PermissionsAndroid.RESULTS.GRANTED &&
+            granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] === PermissionsAndroid.RESULTS.GRANTED;
+          if (!ok) {
+            Alert.alert("Permission Required", "Bluetooth permission denied. Go to Settings → Apps → Permissions → Nearby Devices.");
+            return;
+          }
+        } catch {
+          Alert.alert("Permission Error", "Could not request Bluetooth permissions.");
+          return;
+        }
+      }
+    }
+
     try {
       const ESC = "\x1B";
       const GS = "\x1D";
@@ -175,17 +202,40 @@ export default function PrinterSettingsScreen() {
       text += ALIGN_CENTER + "ATOM POS by AxisXNOR" + ALIGN_LEFT + "\n\n\n";
 
       if (settings.printerType === "bluetooth") {
-        if (!settings.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer first."); return; }
+        // Each call in its own try/catch — a failed step should NOT crash the app
         try { await BLEPrinter.init(); } catch (_) {}
+        await new Promise(r => setTimeout(r, 300));
         try { await BLEPrinter.closeConn(); } catch (_) {}
-        await BLEPrinter.connectPrinter(settings.printerAddress);
-        await BLEPrinter.printText(text);
+        await new Promise(r => setTimeout(r, 300));
+        try {
+          await BLEPrinter.connectPrinter(settings.printerAddress);
+        } catch (connErr: any) {
+          Alert.alert("Connection Failed", connErr?.message || "Could not connect to printer. Make sure it is on and paired.");
+          return;
+        }
+        await new Promise(r => setTimeout(r, 400));
+        try {
+          await BLEPrinter.printText(text);
+        } catch (printErr: any) {
+          Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
+          return;
+        }
         try { await BLEPrinter.closeConn(); } catch (_) {}
       } else {
         if (!settings.wifiHost) { Alert.alert("No IP", "Enter printer IP address first."); return; }
-        await NetPrinter.init();
-        await NetPrinter.connectPrinter(settings.wifiHost, parseInt(settings.wifiPort || "9100"));
-        await NetPrinter.printText(text);
+        try { await NetPrinter.init(); } catch (_) {}
+        try {
+          await NetPrinter.connectPrinter(settings.wifiHost, parseInt(settings.wifiPort || "9100"));
+        } catch (connErr: any) {
+          Alert.alert("Connection Failed", connErr?.message || "Could not connect to Wi-Fi printer.");
+          return;
+        }
+        try {
+          await NetPrinter.printText(text);
+        } catch (printErr: any) {
+          Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
+          return;
+        }
       }
       Alert.alert("Success", "Test print sent!");
     } catch (e: any) {
