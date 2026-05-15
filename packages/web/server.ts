@@ -1,9 +1,9 @@
 import { serve } from "@hono/node-server";
-import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import app from "./src/api/index.js";
 import path from "path";
 import fs from "fs";
+import { getMimeType } from "hono/utils/mime";
 
 const port = parseInt(process.env.PORT || "3000");
 
@@ -12,28 +12,31 @@ const server = new Hono();
 // Mount API
 server.route("/", app);
 
-// Serve admin static files
 const adminDistPath = path.resolve(process.cwd(), "dist-admin");
+console.log("Admin dist path:", adminDistPath, "exists:", fs.existsSync(adminDistPath));
 
-if (fs.existsSync(adminDistPath)) {
-  // Serve static assets
-  server.use(
-    "/assets/*",
-    serveStatic({ root: path.resolve(process.cwd(), "dist-admin") })
-  );
+// Serve static files manually
+server.get("*", async (c) => {
+  const url = new URL(c.req.url);
+  let filePath = path.join(adminDistPath, url.pathname);
 
-  // SPA fallback — serve index.html for all non-API routes
-  server.get("*", async (c) => {
-    const indexPath = path.join(adminDistPath, "index.html");
-    if (fs.existsSync(indexPath)) {
-      const html = fs.readFileSync(indexPath, "utf-8");
-      return c.html(html);
-    }
+  // Check if file exists
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    // SPA fallback
+    filePath = path.join(adminDistPath, "index.html");
+  }
+
+  if (!fs.existsSync(filePath)) {
     return c.text("Not found", 404);
+  }
+
+  const ext = path.extname(filePath);
+  const mime = getMimeType(ext) || "application/octet-stream";
+  const content = fs.readFileSync(filePath);
+  return new Response(content, {
+    headers: { "Content-Type": mime },
   });
-} else {
-  console.log("dist-admin not found at:", adminDistPath);
-}
+});
 
 console.log(`Starting server on port ${port}`);
 
