@@ -268,7 +268,7 @@ export default function POSScreen() {
     </style></head><body>
     <h2>${rd.shopName}</h2>
     ${rd.shopAddress ? `<p class="sub">${rd.shopAddress}</p>` : ""}
-    ${rd.shopPhone ? `<p class="sub">Tel: ${rd.shopPhone}</p>` : ""}
+    ${rd.shopPhone ? `<p class="sub">${rd.shopPhone}</p>` : ""}
     <div class="sep"></div>
     <div class="meta">
       <span>Bill: <b>${rd.billNumber}</b></span>
@@ -612,7 +612,7 @@ export default function POSScreen() {
       let text = RESET + `${ESC}3\x00` + ALIGN_CENTER;
       text += BOLD_ON + nameSize + rd.shopName + "\r\n" + SIZE_NORMAL + BOLD_OFF + NORMAL_SPACING;
       if (rd.shopAddress) text += ALIGN_CENTER + BOLD_ON + addrSize + rd.shopAddress + SIZE_NORMAL + BOLD_OFF + "\r\n";
-      if (rd.shopPhone) text += ALIGN_CENTER + BOLD_ON + addrSize + "Tel: " + rd.shopPhone + SIZE_NORMAL + BOLD_OFF + "\r\n";
+      if (rd.shopPhone) text += ALIGN_CENTER + BOLD_ON + addrSize + rd.shopPhone + SIZE_NORMAL + BOLD_OFF + "\r\n";
       text += ALIGN_LEFT + SEP_LIGHT + "\r\n";
       if (ps.receiptHeader) text += ALIGN_CENTER + SIZE_NORMAL + ps.receiptHeader + "\r\n";
       text += ALIGN_LEFT + SEP_HEAVY + "\r\n";
@@ -1367,7 +1367,7 @@ export default function POSScreen() {
                     <Text style={styles.rcShopAddr}>{receiptData.shopAddress}</Text>
                   ) : null}
                   {receiptData.shopPhone ? (
-                    <Text style={styles.rcShopAddr}>Tel: {receiptData.shopPhone}</Text>
+                    <Text style={styles.rcShopAddr}>{receiptData.shopPhone}</Text>
                   ) : null}
                   <Text style={styles.rcDash}>- - - - - - - - - - - - - - - - - -</Text>
 

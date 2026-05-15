@@ -99,13 +99,12 @@ export default function BusinessInfoScreen() {
                 <Text style={styles.fieldLabel}>Shop Name</Text>
               </View>
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.readOnly]}
                 value={shopName}
-                onChangeText={setShopName}
-                placeholder="e.g. Pandora Fashion"
+                editable={false}
                 placeholderTextColor={colors.textSecondary}
-                autoCapitalize="words"
               />
+              <Text style={styles.readOnlyHint}>Only editable by super admin</Text>
             </View>
 
             <View style={styles.divider} />
@@ -118,14 +117,14 @@ export default function BusinessInfoScreen() {
                 <Text style={styles.fieldLabel}>Address</Text>
               </View>
               <TextInput
-                style={[styles.input, styles.multilineInput]}
+                style={[styles.input, styles.multilineInput, styles.readOnly]}
                 value={shopAddress}
-                onChangeText={setShopAddress}
-                placeholder="e.g. 123 Main St, Colombo 07"
+                editable={false}
                 placeholderTextColor={colors.textSecondary}
                 multiline
                 numberOfLines={2}
               />
+              <Text style={styles.readOnlyHint}>Only editable by super admin</Text>
             </View>
 
             <View style={styles.divider} />
@@ -225,4 +224,6 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   saveBtnText: { fontSize: 16, fontWeight: "700", color: "#fff" },
+  readOnly: { backgroundColor: "#f0f0f0", color: colors.textSecondary, opacity: 0.75 },
+  readOnlyHint: { fontSize: 11, color: colors.textSecondary, marginTop: 4, fontStyle: "italic" },
 });

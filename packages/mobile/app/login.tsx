@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   ScrollView,
   Dimensions,
   StatusBar,
+  Animated,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +25,87 @@ const TEAL = "#2BBFB3";
 const HEADER_H = SH * 0.28;
 
 const splashBg = require("../assets/splash-bg.jpg");
+
+// Floating label input component
+function FloatingInput({
+  label,
+  value,
+  onChangeText,
+  secureTextEntry,
+  autoCapitalize,
+  keyboardType,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  secureTextEntry?: boolean;
+  autoCapitalize?: any;
+  keyboardType?: any;
+}) {
+  const anim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const [focused, setFocused] = useState(false);
+
+  const handleFocus = () => {
+    setFocused(true);
+    Animated.timing(anim, { toValue: 1, duration: 160, useNativeDriver: false }).start();
+  };
+  const handleBlur = () => {
+    setFocused(false);
+    if (!value) {
+      Animated.timing(anim, { toValue: 0, duration: 160, useNativeDriver: false }).start();
+    }
+  };
+
+  const labelTop = anim.interpolate({ inputRange: [0, 1], outputRange: [12, -8] });
+  const labelSize = anim.interpolate({ inputRange: [0, 1], outputRange: [14, 11] });
+  const labelColor = anim.interpolate({ inputRange: [0, 1], outputRange: ["#aaa", TEAL] });
+  const borderColor = focused ? TEAL : "#ddd";
+
+  return (
+    <View style={[floatStyles.wrapper, { borderColor }]}>
+      <Animated.Text style={[floatStyles.label, { top: labelTop, fontSize: labelSize, color: labelColor }]}>
+        {label}
+      </Animated.Text>
+      <TextInput
+        style={floatStyles.input}
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        secureTextEntry={secureTextEntry}
+        autoCapitalize={autoCapitalize ?? "none"}
+        autoCorrect={false}
+        keyboardType={keyboardType}
+      />
+    </View>
+  );
+}
+
+const floatStyles = StyleSheet.create({
+  wrapper: {
+    borderWidth: 1.5,
+    borderRadius: 10,
+    height: 48,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    position: "relative",
+  },
+  label: {
+    position: "absolute",
+    left: 14,
+    backgroundColor: "#fff",
+    paddingHorizontal: 3,
+    zIndex: 1,
+  },
+  input: {
+    fontSize: 14,
+    color: "#222",
+    paddingTop: 6,
+    paddingBottom: 0,
+  },
+});
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -60,10 +142,9 @@ export default function LoginScreen() {
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={TEAL} translucent />
 
-      {/* ── HEADER: splash bg + atom logo ── */}
+      {/* ── HEADER ── */}
       <View style={[styles.header, { height: HEADER_H + insets.top }]}>
         <Image source={splashBg} style={styles.headerBg} resizeMode="cover" />
-        {/* bottom white wave */}
         <View style={styles.wave} />
       </View>
 
@@ -77,35 +158,24 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.body, { paddingBottom: insets.bottom + 32 }]}>
+          <View style={[styles.body, { paddingBottom: insets.bottom + 24 }]}>
             <Text style={styles.signIn}>Sign in !</Text>
 
-            <Text style={styles.label}>Shop ID</Text>
-            <TextInput
-              style={styles.input}
+            <FloatingInput
+              label="Shop ID"
               value={shopId}
-              onChangeText={setShopId}
-              placeholderTextColor="#bbb"
+              onChangeText={v => setShopId(v.toUpperCase())}
               autoCapitalize="characters"
-              autoCorrect={false}
             />
-
-            <Text style={styles.label}>User name</Text>
-            <TextInput
-              style={styles.input}
+            <FloatingInput
+              label="Username"
               value={username}
               onChangeText={setUsername}
-              placeholderTextColor="#bbb"
-              autoCapitalize="none"
-              autoCorrect={false}
             />
-
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
+            <FloatingInput
+              label="Password"
               value={password}
               onChangeText={setPassword}
-              placeholderTextColor="#bbb"
               secureTextEntry
             />
 
@@ -135,7 +205,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#fff" },
   flex: { flex: 1 },
 
-  // ── header ──
   header: {
     width: SW,
     overflow: "hidden",
@@ -147,7 +216,6 @@ const styles = StyleSheet.create({
     width: SW,
     height: HEADER_H + 100,
   },
-  // white rounded bottom edge
   wave: {
     position: "absolute",
     bottom: -30,
@@ -158,44 +226,27 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
 
-  // ── body ──
   body: {
-    paddingHorizontal: 32,
-    paddingTop: 24,
+    paddingHorizontal: 28,
+    paddingTop: 10,
     backgroundColor: "#fff",
   },
   signIn: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
     color: "#1a1a1a",
     textAlign: "center",
-    marginBottom: 22,
-  },
-  label: {
-    fontSize: 13,
-    color: "#555",
-    marginBottom: 6,
-    marginTop: 2,
-  },
-  input: {
-    borderWidth: 1.5,
-    borderColor: TEAL,
-    borderRadius: 50,
-    height: 48,
-    paddingHorizontal: 18,
-    fontSize: 15,
-    color: "#222",
-    marginBottom: 14,
-    backgroundColor: "#fff",
+    marginBottom: 18,
+    marginTop: 4,
   },
   loginBtn: {
     backgroundColor: "#1B5E20",
     borderRadius: 50,
-    paddingVertical: 14,
+    paddingVertical: 13,
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 18,
-    marginHorizontal: 20,
+    marginTop: 6,
+    marginBottom: 14,
+    marginHorizontal: 16,
     elevation: 2,
     shadowColor: "#000",
     shadowOpacity: 0.15,
@@ -204,7 +255,7 @@ const styles = StyleSheet.create({
   },
   loginBtnText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
     letterSpacing: 0.5,
   },

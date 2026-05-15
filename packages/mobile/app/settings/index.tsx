@@ -141,6 +141,18 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* Support */}
+        <Text style={styles.sectionTitle}>Support</Text>
+        <View style={styles.card}>
+          <View style={styles.supportBlock}>
+            <Text style={styles.supportDev}>Developed by AxisXNOR (PVT) Ltd</Text>
+            <Text style={styles.supportSubLabel}>Contact for support</Text>
+            <Text style={styles.supportContact}>atompos@axisxnor.com</Text>
+            <Text style={styles.supportContact}>+94711336666</Text>
+            <Text style={styles.supportContact}>+94761619596</Text>
+          </View>
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -218,4 +230,8 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 14, fontWeight: "600", color: colors.textPrimary },
   rowSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   divider: { height: 1, backgroundColor: colors.border, marginLeft: 62 },
+  supportBlock: { padding: spacing.md, gap: 4 },
+  supportDev: { fontSize: 14, fontWeight: "700", color: colors.textPrimary, marginBottom: 6 },
+  supportSubLabel: { fontSize: 11, fontWeight: "600", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 },
+  supportContact: { fontSize: 13, color: colors.primary, marginBottom: 2 },
 });
