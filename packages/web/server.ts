@@ -15,19 +15,32 @@ server.route("/", app);
 // Debug endpoint to diagnose path issues
 server.get("/debug-path", (c) => {
   const cwd = process.cwd();
-  const candidates = [
-    path.resolve(cwd, "admin-entry", "dist-admin"),
-    path.resolve(cwd, "dist-admin"),
-    path.resolve(__dirname, "admin-entry", "dist-admin"),
-    path.resolve(__dirname, "dist-admin"),
-  ];
   const info: Record<string, any> = { cwd, __dirname };
-  for (const p of candidates) {
-    info[p] = fs.existsSync(p) ? "EXISTS" : "missing";
-    if (fs.existsSync(p)) {
-      try { info[p + "/files"] = fs.readdirSync(p).slice(0, 5); } catch {}
-    }
+  
+  // List top-level dirs
+  try { info["cwd_ls"] = fs.readdirSync(cwd); } catch {}
+  
+  // Check dist-server location
+  try { info["dist-server_ls"] = fs.readdirSync(path.join(cwd, "dist-server")); } catch {}
+  
+  // Check admin-entry
+  try { info["admin-entry_ls"] = fs.readdirSync(path.join(cwd, "admin-entry")); } catch {}
+  
+  // Recursive search for index.html
+  const found: string[] = [];
+  function findHtml(dir: string, depth: number) {
+    if (depth > 4) return;
+    try {
+      for (const f of fs.readdirSync(dir)) {
+        const full = path.join(dir, f);
+        if (f === "index.html") found.push(full);
+        else if (fs.statSync(full).isDirectory()) findHtml(full, depth + 1);
+      }
+    } catch {}
   }
+  findHtml(cwd, 0);
+  info["index_html_locations"] = found;
+  
   return c.json(info);
 });
 
