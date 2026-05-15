@@ -7,6 +7,8 @@
   },
   "scripts": {
     "build": "tsc --noEmit && vite build",
+    "build:server": "bun build ./server.ts --outdir ./dist-server --target node",
+    "start": "node ./dist-server/server.js",
     "dev": "vite",
     "dev:admin": "vite --config vite.admin.config.ts",
     "lint": "eslint .",
@@ -19,6 +21,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1046.0",
     "@aws-sdk/s3-request-presigner": "^3.1046.0",
+    "@hono/node-server": "^2.0.2",
     "@libsql/client": "^0.17.2",
     "@radix-ui/react-slot": "^1.2.4",
     "@runablehq/website-runtime": "^0.10.0",
