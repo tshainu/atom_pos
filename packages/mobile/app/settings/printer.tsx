@@ -176,9 +176,11 @@ export default function PrinterSettingsScreen() {
 
       if (settings.printerType === "bluetooth") {
         if (!settings.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer first."); return; }
-        await BLEPrinter.init();
+        try { await BLEPrinter.init(); } catch (_) {}
+        try { await BLEPrinter.closeConn(); } catch (_) {}
         await BLEPrinter.connectPrinter(settings.printerAddress);
         await BLEPrinter.printText(text);
+        try { await BLEPrinter.closeConn(); } catch (_) {}
       } else {
         if (!settings.wifiHost) { Alert.alert("No IP", "Enter printer IP address first."); return; }
         await NetPrinter.init();
