@@ -648,12 +648,14 @@ export default function POSScreen() {
       text += "\x1d\x56\x00";
       if (ps.printerType === "bluetooth") {
         if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
-        await BLEPrinter.init();
+        try { await BLEPrinter.init(); } catch {}
+        try { await BLEPrinter.closeConn(); } catch {}
         await BLEPrinter.connectPrinter(ps.printerAddress);
         await BLEPrinter.printText(text);
       } else {
         if (!ps.wifiHost) { Alert.alert("No IP", "Enter printer IP in Settings."); return; }
-        await NetPrinter.init();
+        try { await NetPrinter.init(); } catch {}
+        try { await NetPrinter.closeConn(); } catch {}
         await NetPrinter.connectPrinter(ps.wifiHost, parseInt(ps.wifiPort || "9100"));
         await NetPrinter.printText(text);
       }
@@ -1556,12 +1558,14 @@ export default function POSScreen() {
 
                     if (ps.printerType === "bluetooth") {
                       if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings first."); return; }
-                      await BLEPrinter.init();
+                      try { await BLEPrinter.init(); } catch {}
+                      try { await BLEPrinter.closeConn(); } catch {}
                       await BLEPrinter.connectPrinter(ps.printerAddress);
                       await BLEPrinter.printText(text);
                     } else {
                       if (!ps.wifiHost) { Alert.alert("No IP", "Enter printer IP in Settings first."); return; }
-                      await NetPrinter.init();
+                      try { await NetPrinter.init(); } catch {}
+                      try { await NetPrinter.closeConn(); } catch {}
                       await NetPrinter.connectPrinter(ps.wifiHost, parseInt(ps.wifiPort || "9100"));
                       await NetPrinter.printText(text);
                     }
