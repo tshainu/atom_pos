@@ -83,7 +83,7 @@ export default function Shops() {
     try {
       const result = await adminCreateShop(newShop);
       setShowAdd(false);
-      const username = result.shop?.shopId?.toLowerCase() ?? newShop.shopId.toLowerCase();
+      const username = result.adminUsername ?? "admin";
       const pw = newShop.adminPassword || "admin123";
       alert(`Shop created!\n\nLogin credentials for the app:\nShop ID: ${newShop.shopId}\nUsername: ${username}\nPassword: ${pw}`);
       setNewShop({ shopId: genShopId(), name: "", ownerName: "", ownerContact: "", address: "", phone: "", adminPassword: "" });

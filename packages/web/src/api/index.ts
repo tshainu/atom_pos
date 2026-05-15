@@ -1197,7 +1197,7 @@ The image should be square, 256x256 pixels.`;
     } as any).returning();
     // Always create the admin user for this shop
     const defaultPassword = body.adminPassword || "admin123";
-    const adminUsername = body.shopId.toLowerCase();
+    const adminUsername = "admin";
     await db.insert(schema.users).values({
       shopId: shop.id, username: adminUsername,
       passwordHash: hashPassword(defaultPassword),
