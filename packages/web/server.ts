@@ -12,11 +12,50 @@ const server = new Hono();
 // Mount API
 server.route("/", app);
 
-const adminDistPath = path.resolve(process.cwd(), "admin-entry", "dist-admin");
-console.log("Admin dist path:", adminDistPath, "exists:", fs.existsSync(adminDistPath));
+// Debug endpoint to diagnose path issues
+server.get("/debug-path", (c) => {
+  const cwd = process.cwd();
+  const candidates = [
+    path.resolve(cwd, "admin-entry", "dist-admin"),
+    path.resolve(cwd, "dist-admin"),
+    path.resolve(__dirname, "admin-entry", "dist-admin"),
+    path.resolve(__dirname, "dist-admin"),
+  ];
+  const info: Record<string, any> = { cwd, __dirname };
+  for (const p of candidates) {
+    info[p] = fs.existsSync(p) ? "EXISTS" : "missing";
+    if (fs.existsSync(p)) {
+      try { info[p + "/files"] = fs.readdirSync(p).slice(0, 5); } catch {}
+    }
+  }
+  return c.json(info);
+});
+
+// Find admin dist — try multiple candidate paths
+function findAdminDist(): string | null {
+  const candidates = [
+    path.resolve(process.cwd(), "admin-entry", "dist-admin"),
+    path.resolve(process.cwd(), "dist-admin"),
+    path.resolve(__dirname, "..", "admin-entry", "dist-admin"),
+    path.resolve(__dirname, "admin-entry", "dist-admin"),
+    path.resolve(__dirname, "dist-admin"),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p) && fs.existsSync(path.join(p, "index.html"))) {
+      console.log("Found admin dist at:", p);
+      return p;
+    }
+  }
+  console.error("Admin dist NOT found. Tried:", candidates);
+  return null;
+}
+
+const adminDistPath = findAdminDist();
 
 // Serve static files manually
 server.get("*", async (c) => {
+  if (!adminDistPath) return c.text("Admin build not found", 404);
+
   const url = new URL(c.req.url);
   let filePath = path.join(adminDistPath, url.pathname);
 
