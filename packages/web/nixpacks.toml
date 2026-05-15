@@ -2,7 +2,7 @@
 cmds = ["bun install"]
 
 [phases.build]
-cmds = ["bun run build:server"]
+cmds = ["bun run build:admin", "bun run build:server"]
 
 [start]
 cmd = "bun run start"

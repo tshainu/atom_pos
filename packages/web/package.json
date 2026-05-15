@@ -8,6 +8,8 @@
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "build:server": "bun build ./server.ts --outdir ./dist-server --target node",
+    "build:admin": "vite build --config vite.admin.config.ts --outDir ./dist-admin --emptyOutDir",
+    "build:all": "bun run build:admin && bun run build:server",
     "start": "node ./dist-server/server.js",
     "dev": "vite",
     "dev:admin": "vite --config vite.admin.config.ts",
