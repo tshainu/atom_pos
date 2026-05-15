@@ -617,7 +617,8 @@ export default function POSScreen() {
       if (ps.receiptHeader) text += ALIGN_CENTER + SIZE_NORMAL + ps.receiptHeader + "\n";
       text += ALIGN_LEFT + SEP_HEAVY + "\n";
       const payLabel = rd.isCredit ? "Credit" : (rd.paymentMethod.charAt(0).toUpperCase() + rd.paymentMethod.slice(1));
-      text += `Bill: ${rd.billNumber}   ${rd.printedAt}   ${payLabel}\n`;
+      text += `Bill: ${rd.billNumber}   ${rd.printedAt}\n`;
+      text += `Payment: ${payLabel}\n`;
       text += SEP_LIGHT + "\n" + itemLines + "\n" + SEP_LIGHT + "\n";
       const padW = is80 ? 32 : 20;
       text += `Subtotal:`.padEnd(padW) + `Rs.${rd.subtotal.toLocaleString()}\n`;
@@ -1364,8 +1365,11 @@ export default function POSScreen() {
                   {/* Bill number + date + payment method */}
                   <View style={styles.rcMetaRow}>
                     <Text style={styles.rcMeta}>Bill: {receiptData.billNumber}</Text>
-                    <Text style={styles.rcMeta}>{receiptData.printedAt}{!receiptData.isCredit ? `  |  Paid: ${receiptData.paymentMethod.charAt(0).toUpperCase() + receiptData.paymentMethod.slice(1)}` : ""}</Text>
+                    <Text style={styles.rcMeta}>{receiptData.printedAt}</Text>
                   </View>
+                  {!receiptData.isCredit && (
+                    <Text style={styles.rcMeta}>Payment: {receiptData.paymentMethod.charAt(0).toUpperCase() + receiptData.paymentMethod.slice(1)}</Text>
+                  )}
                   <Text style={styles.rcDash}>- - - - - - - - - - - - - - - - - -</Text>
 
                   {/* Items table header */}
