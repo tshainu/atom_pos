@@ -12,7 +12,7 @@ const server = new Hono();
 // Mount API
 server.route("/", app);
 
-const adminDistPath = path.resolve(process.cwd(), "dist-admin");
+const adminDistPath = path.resolve(process.cwd(), "admin-entry", "dist-admin");
 console.log("Admin dist path:", adminDistPath, "exists:", fs.existsSync(adminDistPath));
 
 // Serve static files manually
