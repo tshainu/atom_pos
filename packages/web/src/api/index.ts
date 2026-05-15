@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { db } from "./database";
 import * as schema from "./database/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, or, isNull } from "drizzle-orm";
 import crypto from "crypto";
 import { generateText } from "ai";
 import { gateway } from "./lib/gateway";
@@ -787,17 +787,31 @@ The image should be square, 256x256 pixels.`;
     if (from) saleConditions.push(sql`s.created_at >= ${Math.floor(new Date(from).getTime()/1000)}`);
     if (to) saleConditions.push(sql`s.created_at <= ${Math.floor(new Date(to).getTime()/1000)}`);
 
-    const rows = await db.execute(sql`
-      SELECT s.bill_number, si.item_name, si.qty, si.price_per_item, si.total, s.created_at
-      FROM sale_items si
-      JOIN sales s ON si.sale_id = s.id
-      WHERE s.shop_id = ${shopId} AND s.status = 'completed'
-      ${from ? sql`AND s.created_at >= ${Math.floor(new Date(from).getTime()/1000)}` : sql``}
-      ${to ? sql`AND s.created_at <= ${Math.floor(new Date(to).getTime()/1000)}` : sql``}
-      ORDER BY s.created_at DESC
-    `);
-    const total = (rows.rows as any[]).reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);
-    return c.json({ rows: rows.rows, total }, 200);
+    const fromTs = from ? Math.floor(new Date(from).getTime()/1000) : null;
+    const toTs = to ? Math.floor(new Date(to).getTime()/1000) : null;
+    const conditions: any[] = [eq(schema.sales.shopId, shopId), eq(schema.sales.status, "completed")];
+    if (fromTs) conditions.push(sql`s.created_at >= ${fromTs}`);
+    if (toTs) conditions.push(sql`s.created_at <= ${toTs}`);
+    const rows = await db
+      .select({
+        bill_number: schema.sales.billNumber,
+        item_name: schema.saleItems.itemName,
+        qty: schema.saleItems.qty,
+        price_per_item: schema.saleItems.pricePerItem,
+        total: schema.saleItems.total,
+        created_at: schema.sales.createdAt,
+      })
+      .from(schema.saleItems)
+      .innerJoin(schema.sales, eq(schema.saleItems.saleId, schema.sales.id))
+      .where(and(
+        eq(schema.sales.shopId, shopId),
+        eq(schema.sales.status, "completed"),
+        ...(fromTs ? [sql`${schema.sales.createdAt} >= ${new Date(fromTs * 1000)}`] : []),
+        ...(toTs ? [sql`${schema.sales.createdAt} <= ${new Date(toTs * 1000)}`] : []),
+      ))
+      .orderBy(desc(schema.sales.createdAt));
+    const total = rows.reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);
+    return c.json({ rows, total }, 200);
   })
 
   // ── Report: Item Report (Item | qty | amount) ──────────────────────────────
@@ -806,19 +820,27 @@ The image should be square, 256x256 pixels.`;
     const { from, to } = c.req.query() as { from?: string; to?: string };
     if (!shopId) return c.json({ error: "shopId required" }, 400);
 
-    const rows = await db.execute(sql`
-      SELECT si.item_name, SUM(si.qty) as total_qty, SUM(si.total) as total_amount
-      FROM sale_items si
-      JOIN sales s ON si.sale_id = s.id
-      WHERE s.shop_id = ${shopId} AND s.status = 'completed'
-      ${from ? sql`AND s.created_at >= ${Math.floor(new Date(from).getTime()/1000)}` : sql``}
-      ${to ? sql`AND s.created_at <= ${Math.floor(new Date(to).getTime()/1000)}` : sql``}
-      GROUP BY si.item_name
-      ORDER BY total_amount DESC
-    `);
-    const totalAmount = (rows.rows as any[]).reduce((s: number, r: any) => s + (Number(r.total_amount) || 0), 0);
-    const totalQty = (rows.rows as any[]).reduce((s: number, r: any) => s + (Number(r.total_qty) || 0), 0);
-    return c.json({ rows: rows.rows, totalAmount, totalQty }, 200);
+    const fromTs2 = from ? Math.floor(new Date(from).getTime() / 1000) : null;
+    const toTs2 = to ? Math.floor(new Date(to).getTime() / 1000) : null;
+    const rows = await db
+      .select({
+        item_name: schema.saleItems.itemName,
+        total_qty: sql<number>`SUM(${schema.saleItems.qty})`,
+        total_amount: sql<number>`SUM(${schema.saleItems.total})`,
+      })
+      .from(schema.saleItems)
+      .innerJoin(schema.sales, eq(schema.saleItems.saleId, schema.sales.id))
+      .where(and(
+        eq(schema.sales.shopId, shopId),
+        eq(schema.sales.status, "completed"),
+        ...(fromTs2 ? [sql`${schema.sales.createdAt} >= ${fromTs2}`] : []),
+        ...(toTs2 ? [sql`${schema.sales.createdAt} <= ${toTs2}`] : []),
+      ))
+      .groupBy(schema.saleItems.itemName)
+      .orderBy(sql`SUM(${schema.saleItems.total}) DESC`);
+    const totalAmount = rows.reduce((s: number, r: any) => s + (Number(r.total_amount) || 0), 0);
+    const totalQty = rows.reduce((s: number, r: any) => s + (Number(r.total_qty) || 0), 0);
+    return c.json({ rows, totalAmount, totalQty }, 200);
   })
 
   // ── Report: Credit Sales Report ────────────────────────────────────────────
@@ -847,18 +869,29 @@ The image should be square, 256x256 pixels.`;
     const conditions: any[] = [eq(schema.creditCollections.shopId, shopId)];
     if (from) conditions.push(sql`created_at >= ${Math.floor(new Date(from).getTime()/1000)}`);
     if (to) conditions.push(sql`created_at <= ${Math.floor(new Date(to).getTime()/1000)}`);
-    const rows = await db.execute(sql`
-      SELECT cc.id, cc.amount, cc.note, cc.created_at,
-             s.bill_number, s.customer_name, s.customer_phone, s.net_pay
-      FROM credit_collections cc
-      JOIN sales s ON cc.sale_id = s.id
-      WHERE cc.shop_id = ${shopId}
-      ${from ? sql`AND cc.created_at >= ${Math.floor(new Date(from).getTime()/1000)}` : sql``}
-      ${to ? sql`AND cc.created_at <= ${Math.floor(new Date(to).getTime()/1000)}` : sql``}
-      ORDER BY cc.created_at DESC
-    `);
-    const total = (rows.rows as any[]).reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0);
-    return c.json({ rows: rows.rows, total }, 200);
+    const fromTs3 = from ? Math.floor(new Date(from).getTime() / 1000) : null;
+    const toTs3 = to ? Math.floor(new Date(to).getTime() / 1000) : null;
+    const rows = await db
+      .select({
+        id: schema.creditCollections.id,
+        amount: schema.creditCollections.amount,
+        note: schema.creditCollections.note,
+        created_at: schema.creditCollections.createdAt,
+        bill_number: schema.sales.billNumber,
+        customer_name: schema.sales.customerName,
+        customer_phone: schema.sales.customerPhone,
+        net_pay: schema.sales.netPay,
+      })
+      .from(schema.creditCollections)
+      .innerJoin(schema.sales, eq(schema.creditCollections.saleId, schema.sales.id))
+      .where(and(
+        eq(schema.creditCollections.shopId, shopId),
+        ...(fromTs3 ? [sql`${schema.creditCollections.createdAt} >= ${fromTs3}`] : []),
+        ...(toTs3 ? [sql`${schema.creditCollections.createdAt} <= ${toTs3}`] : []),
+      ))
+      .orderBy(desc(schema.creditCollections.createdAt));
+    const total = rows.reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0);
+    return c.json({ rows, total }, 200);
   })
 
   // ── Credit Sales for collection screen ────────────────────────────────────
@@ -1378,15 +1411,23 @@ The image should be square, 256x256 pixels.`;
     if (!shopId) return c.json({ error: "shopId required" }, 400);
 
     const now = new Date();
-    const rows = await db.execute(sql`
-      SELECT * FROM announcements
-      WHERE is_active = 1
-        AND (target_shop_id IS NULL OR target_shop_id = ${shopId})
-        AND (expires_at IS NULL OR expires_at > ${Math.floor(now.getTime() / 1000)})
-      ORDER BY created_at DESC
-      LIMIT 10
-    `);
-    return c.json({ announcements: rows.rows }, 200);
+    const rows = await db
+      .select()
+      .from(schema.announcements)
+      .where(and(
+        eq(schema.announcements.isActive, true),
+        or(
+          isNull(schema.announcements.targetShopId),
+          eq(schema.announcements.targetShopId, shopId),
+        ),
+        or(
+          isNull(schema.announcements.expiresAt),
+          sql`${schema.announcements.expiresAt} > ${now}`,
+        ),
+      ))
+      .orderBy(desc(schema.announcements.createdAt))
+      .limit(10);
+    return c.json({ announcements: rows }, 200);
   });
 
 // Log activity helper — called from auth routes
