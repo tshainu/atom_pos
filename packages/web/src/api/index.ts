@@ -1430,6 +1430,47 @@ The image should be square, 256x256 pixels.`;
     return c.json({ announcements: rows }, 200);
   });
 
+  // ONE-TIME MIGRATION: rename all shop admin users to "admin"
+  .post("/admin/migrate/fix-admin-usernames", async (c) => {
+    const auth = c.req.header("Authorization")?.replace("Bearer ", "");
+    const token = await db.select().from(schema.sessions).where(eq(schema.sessions.token, auth ?? "")).get();
+    if (!token) return c.json({ error: "Unauthorized" }, 401);
+
+    // Get all shops
+    const allShops = await db.select().from(schema.shops).all();
+    let updated = 0;
+    let skipped = 0;
+    const results: any[] = [];
+
+    for (const shop of allShops) {
+      // Find the admin user for this shop (role = admin)
+      const adminUser = await db.select().from(schema.users)
+        .where(and(eq(schema.users.shopId, shop.id), eq(schema.users.role, "admin")))
+        .get();
+
+      if (!adminUser) {
+        results.push({ shopId: shop.shopId, status: "no admin user found" });
+        skipped++;
+        continue;
+      }
+
+      if (adminUser.username === "admin") {
+        results.push({ shopId: shop.shopId, status: "already admin" });
+        skipped++;
+        continue;
+      }
+
+      await db.update(schema.users)
+        .set({ username: "admin" } as any)
+        .where(eq(schema.users.id, adminUser.id));
+
+      results.push({ shopId: shop.shopId, oldUsername: adminUser.username, status: "updated" });
+      updated++;
+    }
+
+    return c.json({ updated, skipped, results }, 200);
+  })
+
 // Log activity helper — called from auth routes
 async function logActivity(userId: number, shopId: number, action: string, details?: string, ip?: string) {
   try {
