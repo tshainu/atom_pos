@@ -1,8 +1,7 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "buildCommand": "bun install && bun run build:server"
-
+    "buildCommand": "bun install && bun run build:admin && bun run build:server"
   },
   "deploy": {
     "startCommand": "bun run start",
