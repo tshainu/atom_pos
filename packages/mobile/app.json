@@ -38,12 +38,12 @@
       "expo-router"
     ],
     "extra": {
-      "apiUrl": "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site/",
+      "apiUrl": "https://atompos.up.railway.app/",
       "router": {},
       "eas": {
-        "projectId": "7df212a0-990d-41e2-8eb6-2dc08c905d6d"
+        "projectId": "e8993079-fe32-4f9f-95e2-44f17bbcb614"
       }
     },
-    "owner": "tshainut"
+    "owner": "axisxnor"
   }
 }

@@ -9,7 +9,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site/"
+        "EXPO_PUBLIC_API_URL": "https://atompos.up.railway.app/"
       }
     },
     "production": {
