@@ -1433,8 +1433,7 @@ The image should be square, 256x256 pixels.`;
   // ONE-TIME MIGRATION: rename all shop admin users to "admin"
   .post("/admin/migrate/fix-admin-usernames", async (c) => {
     const auth = c.req.header("Authorization")?.replace("Bearer ", "");
-    const token = await db.select().from(schema.sessions).where(eq(schema.sessions.token, auth ?? "")).get();
-    if (!token) return c.json({ error: "Unauthorized" }, 401);
+    if (!auth?.startsWith("admin_")) return c.json({ error: "Unauthorized" }, 401);
 
     // Get all shops
     const allShops = await db.select().from(schema.shops).all();
