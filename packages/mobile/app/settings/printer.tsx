@@ -178,92 +178,34 @@ export default function PrinterSettingsScreen() {
     }
 
     try {
-      const ESC = "\x1B";
-      const GS = "\x1D";
-      const RESET = `${ESC}@`;
-      const BOLD_ON = `${ESC}E\x01`;
-      const BOLD_OFF = `${ESC}E\x00`;
-      const ALIGN_CENTER = `${ESC}a\x01`;
-      const ALIGN_LEFT = `${ESC}a\x00`;
-      const SIZE_NORMAL = `${GS}!\x00`;
-      const SIZE_2X = `${GS}!\x11`;
-      const SIZE_4X = `${GS}!\x33`;
-      const is80 = settings.paperWidth !== "58mm";
-      const SEP = is80 ? "=".repeat(48) : "=".repeat(32);
-      const nameSize = is80 ? SIZE_4X : SIZE_2X;
-
       const now = new Date();
       const pad2 = (n: number) => n.toString().padStart(2, "0");
       const dateStr = `${pad2(now.getDate())}.${pad2(now.getMonth()+1)}.${now.getFullYear()}`;
       const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
-      const colW = is80 ? 48 : 32;
+      const SEP = "================================\n";
 
-      const centerStr = (s: string) => {
-        const pad = Math.max(0, Math.floor((colW - s.length) / 2));
-        return " ".repeat(pad) + s;
-      };
-
-      let text = RESET + ALIGN_CENTER;
-      // Shop name (large) + printer test label
-      if (user?.shopName) {
-        text += nameSize + BOLD_ON + user.shopName + BOLD_OFF + SIZE_NORMAL + "\n";
-      }
-      text += BOLD_ON + "*** PRINTER TEST ***" + BOLD_OFF + "\n";
-      text += SEP + "\n" + ALIGN_LEFT;
-
-      // Date & time
-      text += `Date: ${dateStr}   Time: ${timeStr}\n`;
-      text += SEP + "\n";
-
-      // Printer info
-      text += BOLD_ON + "Printer Details\n" + BOLD_OFF;
-      text += `Paper : ${settings.paperWidth}\n`;
-      text += `Type  : ${settings.printerType === "bluetooth" ? "Bluetooth" : "Wi-Fi"}\n`;
-      if (settings.printerType === "bluetooth" && settings.printerAddress) {
-        text += `MAC   : ${settings.printerAddress}\n`;
-        if (settings.printerName) text += `Name  : ${settings.printerName}\n`;
-      } else if (settings.printerType === "wifi" && settings.wifiHost) {
-        text += `IP    : ${settings.wifiHost}:${settings.wifiPort || "9100"}\n`;
-      }
-      text += SEP + "\n";
-
-      // Sample receipt section
-      text += BOLD_ON + "Sample Items\n" + BOLD_OFF;
-      const sampleItems = [
-        { name: "Sample Item A", qty: 2, price: 150 },
-        { name: "Sample Item B", qty: 1, price: 350 },
-        { name: "Sample Item C", qty: 3, price: 75 },
-      ];
-      const padName = is80 ? 24 : 16;
-      const padQty = 5;
-      const padAmt = is80 ? 10 : 8;
-      text += `${"Item".padEnd(padName)}${"Qty".padEnd(padQty)}${"Amount".padStart(padAmt)}\n`;
-      text += "-".repeat(colW) + "\n";
-      for (const it of sampleItems) {
-        const amt = `Rs.${(it.qty * it.price).toLocaleString()}`;
-        text += it.name.substring(0, padName - 1).padEnd(padName) + String(it.qty).padEnd(padQty) + amt.padStart(padAmt) + "\n";
-      }
-      text += "-".repeat(colW) + "\n";
-      const subtotal = sampleItems.reduce((s, it) => s + it.qty * it.price, 0);
-      const discount = 50;
-      const total = subtotal - discount;
-      text += `Subtotal:`.padEnd(colW - 10) + `Rs.${subtotal.toLocaleString()}`.padStart(10) + "\n";
-      text += `Discount:`.padEnd(colW - 10) + `-Rs.${discount.toLocaleString()}`.padStart(10) + "\n";
-      text += BOLD_ON + `Total:`.padEnd(colW - 10) + `Rs.${total.toLocaleString()}`.padStart(10) + BOLD_OFF + "\n";
-      text += SEP + "\n";
-
-      // Header / footer preview
-      if (settings.receiptHeader) {
-        text += BOLD_ON + "Header Preview:\n" + BOLD_OFF;
-        text += ALIGN_CENTER + settings.receiptHeader + "\n" + ALIGN_LEFT;
-      }
-      if (settings.receiptFooter) {
-        text += BOLD_ON + "Footer Preview:\n" + BOLD_OFF;
-        text += ALIGN_CENTER + settings.receiptFooter + "\n" + ALIGN_LEFT;
-      }
-      text += SEP + "\n";
-      text += ALIGN_CENTER + "ATOM POS by AxisXNOR\n";
-      text += "Printer test successful!\n\n\n";
+      // Plain text only — no ESC/POS commands — to verify printer accepts text
+      // Commands will be re-added once plain text is confirmed working
+      let text = "";
+      text += "ATOM POS - PRINTER TEST\n";
+      text += SEP;
+      if (user?.shopName) text += `Shop: ${user.shopName}\n`;
+      text += `Date: ${dateStr}  ${timeStr}\n`;
+      text += `Paper: ${settings.paperWidth}\n`;
+      text += `Type : ${settings.printerType === "bluetooth" ? "Bluetooth" : "Wi-Fi"}\n`;
+      if (settings.printerAddress) text += `MAC  : ${settings.printerAddress}\n`;
+      text += SEP;
+      text += "Item A        x2   Rs.300\n";
+      text += "Item B        x1   Rs.350\n";
+      text += "Item C        x3   Rs.225\n";
+      text += SEP;
+      text += "Subtotal         Rs.875\n";
+      text += "Discount          Rs.50\n";
+      text += "Total            Rs.825\n";
+      text += SEP;
+      text += "ATOM POS by AxisXNOR\n";
+      text += "Test successful!\n";
+      text += "\n\n\n\n";
 
       const { BLEPrinter, NetPrinter } = getPrinter();
       if (settings.printerType === "bluetooth") {
@@ -278,18 +220,19 @@ export default function PrinterSettingsScreen() {
           Alert.alert("Connection Failed", connErr?.message || "Could not connect to printer. Make sure it is on and paired.");
           return;
         }
-        await new Promise(r => setTimeout(r, 400));
-        // Send a bare ESC @ reset to kick the printer out of any image/raster mode
-        // before sending the actual receipt. Some printers (e.g. MPrinter P10) latch
-        // into bitmap mode when previously used with an image-printing app.
-        try { await BLEPrinter.printText("\x1B@\x1B@"); } catch (_) {}
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 500));
+        // Hard reset: flush ESC@ twice, wait 800ms for printer to reinitialize
+        // MPrinter P10 latches into image mode when used with bitmap apps — need
+        // a long pause after reset before sending any real content
+        try { await BLEPrinter.printText("\x1B@"); } catch (_) {}
+        await new Promise(r => setTimeout(r, 800));
         try {
           await BLEPrinter.printText(text);
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
           return;
         }
+        await new Promise(r => setTimeout(r, 500));
         try { await BLEPrinter.closeConn(); } catch (_) {}
       } else {
         if (!settings.wifiHost) { Alert.alert("No IP", "Enter printer IP address first."); return; }
