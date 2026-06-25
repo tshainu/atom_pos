@@ -588,65 +588,52 @@ export default function POSScreen() {
       };
       const ps = printerSettings;
       const is80 = ps.paperWidth !== "58mm";
-      const ESC = "\x1B"; const GS = "\x1D";
-      const RESET = `${ESC}@`;
-      const BOLD_ON = `${ESC}E\x01`; const BOLD_OFF = `${ESC}E\x00`;
-      const ALIGN_CENTER = `${ESC}a\x01`; const ALIGN_LEFT = `${ESC}a\x00`;
-      const SIZE_NORMAL = `${GS}!\x00`; const SIZE_2X = `${GS}!\x11`;
-      const SEP_HEAVY = is80 ? "=".repeat(42) : "=".repeat(32);
-      const SEP_LIGHT = is80 ? "-".repeat(42) : "-".repeat(32);
-      const SIZE_2H = `${GS}!\x01`;  // double height only (~24pt)
-      const nameSize = is80 ? SIZE_2X : SIZE_2X;
-      const addrSize = SIZE_NORMAL;
       const colWidth = is80 ? 42 : 32;
+      const SEP_HEAVY = "=".repeat(colWidth);
+      const SEP_LIGHT = "-".repeat(colWidth);
       const center = (s: string) => " ".repeat(Math.max(0, Math.floor((colWidth - s.length) / 2))) + s;
+      const padW = is80 ? 28 : 18;
       const itemLines = rd.items.map((it: any, i: number) => {
-        const nc = is80 ? 18 : 12;
+        const nc = is80 ? 20 : 14;
         const num = `${i + 1}.`.padEnd(3);
         const name = it.itemName.slice(0, nc).padEnd(nc);
         const qty = `x${it.qty}`.padStart(4);
         const price = `Rs.${(it.pricePerItem ?? (it.qty ? it.total / it.qty : it.total)).toLocaleString()}`;
-        const total = `Rs.${it.total.toLocaleString()}`;
-        return `${num}${name}${qty}  ${price}\r\n${"".padEnd(nc + 3)}Total: ${total}`;
-      }).join("\r\n");
-      const NORMAL_SPACING = `${ESC}2`;
-      let text = RESET + `${ESC}3\x00` + ALIGN_CENTER;
-      text += BOLD_ON + nameSize + rd.shopName + "\r\n" + SIZE_NORMAL + BOLD_OFF + NORMAL_SPACING;
-      if (rd.shopAddress) text += ALIGN_CENTER + BOLD_ON + addrSize + rd.shopAddress + SIZE_NORMAL + BOLD_OFF + "\r\n";
-      if (rd.shopPhone) text += ALIGN_CENTER + BOLD_ON + addrSize + rd.shopPhone + SIZE_NORMAL + BOLD_OFF + "\r\n";
-      text += ALIGN_LEFT + SEP_LIGHT + "\r\n";
-      if (ps.receiptHeader) text += ALIGN_CENTER + SIZE_NORMAL + ps.receiptHeader + "\r\n";
-      text += ALIGN_LEFT + SEP_HEAVY + "\r\n";
+        const total = `  Total: Rs.${it.total.toLocaleString()}`;
+        return `${num}${name}${qty} ${price}\n${" ".repeat(nc + 3)}${total}`;
+      }).join("\n");
       const payLabel = rd.isCredit ? "Credit" : (rd.paymentMethod.charAt(0).toUpperCase() + rd.paymentMethod.slice(1));
-      text += `Bill: ${rd.billNumber.replace("BILL-","")}   ${rd.printedAt}\r\n`;
-      text += `Payment: ${payLabel}\r\n`;
-      // Items table header
-      const hNum = "No.".padEnd(3);
-      const hName = (is80 ? "Item".padEnd(18) : "Item".padEnd(12));
-      const hQty = " Qty";
-      const hPrice = "  Price";
-      text += SEP_LIGHT + "\r\n";
-      text += BOLD_ON + `${hNum}${hName}${hQty}${hPrice}` + BOLD_OFF + "\r\n";
-      text += SEP_LIGHT + "\r\n" + itemLines.replace(/\n/g, "\r\n") + "\r\n" + SEP_LIGHT + "\r\n";
-      const padW = is80 ? 32 : 20;
-      text += `Subtotal:`.padEnd(padW) + `Rs.${rd.subtotal.toLocaleString()}\r\n`;
-      if (rd.discount > 0) text += `Discount:`.padEnd(padW) + `-Rs.${rd.discount.toLocaleString()}\r\n`;
-      text += BOLD_ON + `Total Payable:`.padEnd(padW) + `Rs.${rd.netPay.toLocaleString()}` + BOLD_OFF + "\r\n";
+      let text = "";
+      text += center(rd.shopName) + "\n";
+      if (rd.shopAddress) text += center(rd.shopAddress) + "\n";
+      if (rd.shopPhone) text += center(rd.shopPhone) + "\n";
+      text += SEP_LIGHT + "\n";
+      if (ps.receiptHeader) text += center(ps.receiptHeader) + "\n";
+      text += SEP_HEAVY + "\n";
+      text += `Bill: ${rd.billNumber.replace("BILL-","")}   ${rd.printedAt}\n`;
+      text += `Payment: ${payLabel}\n`;
+      text += SEP_LIGHT + "\n";
+      text += `${"No.".padEnd(3)}${"Item".padEnd(is80 ? 20 : 14)}${"Qty".padStart(4)} Price\n`;
+      text += SEP_LIGHT + "\n";
+      text += itemLines + "\n";
+      text += SEP_LIGHT + "\n";
+      text += `Subtotal:`.padEnd(padW) + `Rs.${rd.subtotal.toLocaleString()}\n`;
+      if (rd.discount > 0) text += `Discount:`.padEnd(padW) + `-Rs.${rd.discount.toLocaleString()}\n`;
+      text += `Total Payable:`.padEnd(padW) + `Rs.${rd.netPay.toLocaleString()}\n`;
       if (!rd.isCredit) {
-        text += BOLD_ON + `Total Paid:`.padEnd(padW) + `Rs.${rd.cashPaid.toLocaleString()}` + BOLD_OFF + "\r\n";
-        text += BOLD_ON + `Balance:`.padEnd(padW) + `Rs.${rd.balance.toLocaleString()}` + BOLD_OFF + "\r\n";
+        text += `Total Paid:`.padEnd(padW) + `Rs.${rd.cashPaid.toLocaleString()}\n`;
+        text += `Balance:`.padEnd(padW) + `Rs.${rd.balance.toLocaleString()}\n`;
       }
       if (rd.isCredit) {
-        text += SEP_LIGHT + "\r\n";
-        text += BOLD_ON + center("** CREDIT SALE **") + BOLD_OFF + "\r\n";
-        if (rd.customerName) text += `Customer: ${rd.customerName}\r\n`;
-        if ((rd as any).customerPhone) text += `Phone:    ${(rd as any).customerPhone}\r\n`;
-        if ((rd as any).creditDate) text += `Due Date: ${(rd as any).creditDate}\r\n`;
+        text += SEP_LIGHT + "\n";
+        text += center("** CREDIT SALE **") + "\n";
+        if (rd.customerName) text += `Customer: ${rd.customerName}\n`;
+        if ((rd as any).customerPhone) text += `Phone:    ${(rd as any).customerPhone}\n`;
+        if ((rd as any).creditDate) text += `Due Date: ${(rd as any).creditDate}\n`;
       }
-      text += SEP_HEAVY + "\r\n";
-      if (ps.receiptFooter) text += ALIGN_CENTER + ps.receiptFooter + "\r\n";
-      text += ALIGN_CENTER + "ATOM POS by AxisXNOR\r\n\r\n\r\n\r\n\r\n\r\n";
-      text += "\x1d\x56\x00";
+      text += SEP_HEAVY + "\n";
+      if (ps.receiptFooter) text += center(ps.receiptFooter) + "\n";
+      text += center("ATOM POS by AxisXNOR") + "\n";
       const { BLEPrinter, NetPrinter } = getPrinter();
       if (ps.printerType === "bluetooth") {
         if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
@@ -660,11 +647,9 @@ export default function POSScreen() {
           Alert.alert("Connection Failed", connErr?.message || "Could not connect to printer. Make sure it is on and paired.");
           return;
         }
-        await new Promise(r => setTimeout(r, 400));
-        try { await BLEPrinter.printText("\x1B@\x1B@"); } catch (_) {}
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 500));
         try {
-          await BLEPrinter.printText(text);
+          await BLEPrinter.printBill(text, { cut: true, tailingLine: true });
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
           return;
@@ -680,7 +665,7 @@ export default function POSScreen() {
           return;
         }
         try {
-          await NetPrinter.printText(text);
+          await NetPrinter.printBill(text, { cut: true, tailingLine: true });
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
           return;
@@ -1510,78 +1495,52 @@ export default function POSScreen() {
                   const ps = printerSettings;
                   try {
                     const is80 = ps.paperWidth !== "58mm";
-                    // ESC/POS helper constants
-                    const ESC = "\x1B";
-                    const GS = "\x1D";
-                    const RESET = `${ESC}@`;
-                    const BOLD_ON = `${ESC}E\x01`;
-                    const BOLD_OFF = `${ESC}E\x00`;
-                    const ALIGN_CENTER = `${ESC}a\x01`;
-                    const ALIGN_LEFT = `${ESC}a\x00`;
-                    // Text size: GS ! n  (n = (height-1)<<4 | (width-1))
-                    const SIZE_NORMAL = `${GS}!\x00`;
-                    const SIZE_2X = `${GS}!\x11`;      // 2x width + 2x height
-                    const SIZE_4X = `${GS}!\x33`;      // 4x width + 4x height
-                    const SEP_HEAVY = is80 ? "=".repeat(42) : "=".repeat(32);
-                    const SEP_LIGHT = is80 ? "-".repeat(42) : "-".repeat(32);
-                    const nameSize = is80 ? SIZE_2X : SIZE_2X;
-                    const addrSize = SIZE_NORMAL;
                     const colWidth = is80 ? 42 : 32;
-
-                    const center = (s: string) => {
-                      const pad = Math.max(0, Math.floor((colWidth - s.length) / 2));
-                      return " ".repeat(pad) + s;
-                    };
-
+                    const SEP_HEAVY = "=".repeat(colWidth);
+                    const SEP_LIGHT = "-".repeat(colWidth);
+                    const padW = is80 ? 28 : 18;
+                    const center = (s: string) => " ".repeat(Math.max(0, Math.floor((colWidth - s.length) / 2))) + s;
                     const itemLines = receiptData.items.map((it, i) => {
-                      const nameCol = is80 ? 18 : 12;
+                      const nc = is80 ? 20 : 14;
                       const num = `${i + 1}.`.padEnd(3);
-                      const name = it.itemName.slice(0, nameCol).padEnd(nameCol);
+                      const name = it.itemName.slice(0, nc).padEnd(nc);
                       const qty = `x${it.qty}`.padStart(4);
                       const price = `Rs.${it.pricePerItem?.toLocaleString() ?? it.total.toLocaleString()}`;
-                      const total = `Rs.${it.total.toLocaleString()}`;
-                      const line1 = `${num}${name}${qty}  ${price}`;
-                      const line2 = `${"".padEnd(nameCol + 3)}Total: ${total}`;
-                      return `${line1}\r\n${line2}`;
-                    }).join("\r\n");
-
-                    const NORMAL_SPACING = `${ESC}2`;
-                    let text = RESET + `${ESC}3\x00` + ALIGN_CENTER;
-                    text += BOLD_ON + nameSize + receiptData.shopName + "\r\n" + SIZE_NORMAL + BOLD_OFF + NORMAL_SPACING;
-                    if (receiptData.shopAddress) text += ALIGN_CENTER + BOLD_ON + addrSize + receiptData.shopAddress + SIZE_NORMAL + BOLD_OFF + "\r\n";
-                    if (receiptData.shopPhone) text += ALIGN_CENTER + BOLD_ON + addrSize + "Tel: " + receiptData.shopPhone + SIZE_NORMAL + BOLD_OFF + "\r\n";
-                    text += ALIGN_LEFT + SEP_LIGHT + "\r\n";
-                    if (ps.receiptHeader) text += ALIGN_CENTER + SIZE_NORMAL + ps.receiptHeader + "\r\n";
-                    text += ALIGN_LEFT + SEP_HEAVY + "\r\n";
+                      const total = `  Total: Rs.${it.total.toLocaleString()}`;
+                      return `${num}${name}${qty} ${price}\n${" ".repeat(nc + 3)}${total}`;
+                    }).join("\n");
                     const pmLabel = receiptData.isCredit ? "Credit" : (receiptData.paymentMethod.charAt(0).toUpperCase() + receiptData.paymentMethod.slice(1));
-                    text += `Bill: ${receiptData.billNumber.replace("BILL-","")}   ${receiptData.printedAt}\r\n`;
-                    text += `Payment: ${pmLabel}\r\n`;
-                    // Item table header
-                    const rHdr = is80 ? "No. " + "Item".padEnd(18) + " Qty  Price" : "No. " + "Item".padEnd(12) + " Qty  Price";
-                    text += SEP_LIGHT + "\r\n";
-                    text += BOLD_ON + rHdr + BOLD_OFF + "\r\n";
-                    text += SEP_LIGHT + "\r\n";
-                    text += itemLines + "\r\n";
-                    text += SEP_LIGHT + "\r\n";
-                    const pad = is80 ? 32 : 20;
-                    text += `Subtotal:`.padEnd(pad) + `Rs.${receiptData.subtotal.toLocaleString()}\r\n`;
-                    if (receiptData.discount > 0) text += `Discount:`.padEnd(pad) + `-Rs.${receiptData.discount.toLocaleString()}\r\n`;
-                    text += BOLD_ON + `Total Payable:`.padEnd(pad) + `Rs.${receiptData.netPay.toLocaleString()}` + BOLD_OFF + "\r\n";
+                    let text = "";
+                    text += center(receiptData.shopName) + "\n";
+                    if (receiptData.shopAddress) text += center(receiptData.shopAddress) + "\n";
+                    if (receiptData.shopPhone) text += center("Tel: " + receiptData.shopPhone) + "\n";
+                    text += SEP_LIGHT + "\n";
+                    if (ps.receiptHeader) text += center(ps.receiptHeader) + "\n";
+                    text += SEP_HEAVY + "\n";
+                    text += `Bill: ${receiptData.billNumber.replace("BILL-","")}   ${receiptData.printedAt}\n`;
+                    text += `Payment: ${pmLabel}\n`;
+                    text += SEP_LIGHT + "\n";
+                    text += `${"No.".padEnd(3)}${"Item".padEnd(is80 ? 20 : 14)}${"Qty".padStart(4)} Price\n`;
+                    text += SEP_LIGHT + "\n";
+                    text += itemLines + "\n";
+                    text += SEP_LIGHT + "\n";
+                    text += `Subtotal:`.padEnd(padW) + `Rs.${receiptData.subtotal.toLocaleString()}\n`;
+                    if (receiptData.discount > 0) text += `Discount:`.padEnd(padW) + `-Rs.${receiptData.discount.toLocaleString()}\n`;
+                    text += `Total Payable:`.padEnd(padW) + `Rs.${receiptData.netPay.toLocaleString()}\n`;
                     if (!receiptData.isCredit) {
-                      text += BOLD_ON + `Total Paid:`.padEnd(pad) + `Rs.${receiptData.cashPaid.toLocaleString()}` + BOLD_OFF + "\r\n";
-                      text += BOLD_ON + `Balance:`.padEnd(pad) + `Rs.${receiptData.balance.toLocaleString()}` + BOLD_OFF + "\r\n";
+                      text += `Total Paid:`.padEnd(padW) + `Rs.${receiptData.cashPaid.toLocaleString()}\n`;
+                      text += `Balance:`.padEnd(padW) + `Rs.${receiptData.balance.toLocaleString()}\n`;
                     }
                     if (receiptData.isCredit) {
-                      text += SEP_LIGHT + "\r\n";
-                      text += BOLD_ON + center("** CREDIT SALE **") + BOLD_OFF + "\r\n";
-                      text += `Customer: ${receiptData.customerName ?? ""}\r\n`;
-                      if (receiptData.customerPhone) text += `Phone:    ${receiptData.customerPhone}\r\n`;
-                      if (receiptData.creditDate) text += `Due Date: ${receiptData.creditDate}\r\n`;
+                      text += SEP_LIGHT + "\n";
+                      text += center("** CREDIT SALE **") + "\n";
+                      text += `Customer: ${receiptData.customerName ?? ""}\n`;
+                      if (receiptData.customerPhone) text += `Phone:    ${receiptData.customerPhone}\n`;
+                      if (receiptData.creditDate) text += `Due Date: ${receiptData.creditDate}\n`;
                     }
-                    text += SEP_HEAVY + "\r\n";
-                    if (ps.receiptFooter) text += ALIGN_CENTER + ps.receiptFooter + "\r\n";
-                    text += ALIGN_CENTER + "ATOM POS by AxisXNOR\r\n\r\n\r\n\r\n\r\n\r\n";
-                    text += "\x1d\x56\x00";
+                    text += SEP_HEAVY + "\n";
+                    if (ps.receiptFooter) text += center(ps.receiptFooter) + "\n";
+                    text += center("ATOM POS by AxisXNOR") + "\n";
 
                     const { BLEPrinter: BLE2, NetPrinter: Net2 } = getPrinter();
                     if (ps.printerType === "bluetooth") {
@@ -1596,11 +1555,9 @@ export default function POSScreen() {
                         Alert.alert("Connection Failed", connErr?.message || "Could not connect to printer. Make sure it is on and paired.");
                         return;
                       }
-                      await new Promise(r => setTimeout(r, 400));
-                      try { await BLE2.printText("\x1B@\x1B@"); } catch (_) {}
-                      await new Promise(r => setTimeout(r, 300));
+                      await new Promise(r => setTimeout(r, 500));
                       try {
-                        await BLE2.printText(text);
+                        await BLE2.printBill(text, { cut: true, tailingLine: true });
                       } catch (printErr: any) {
                         Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
                         return;
@@ -1616,7 +1573,7 @@ export default function POSScreen() {
                         return;
                       }
                       try {
-                        await Net2.printText(text);
+                        await Net2.printBill(text, { cut: true, tailingLine: true });
                       } catch (printErr: any) {
                         Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
                         return;

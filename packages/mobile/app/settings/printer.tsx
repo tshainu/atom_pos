@@ -221,18 +221,12 @@ export default function PrinterSettingsScreen() {
           return;
         }
         await new Promise(r => setTimeout(r, 500));
-        // Hard reset: flush ESC@ twice, wait 800ms for printer to reinitialize
-        // MPrinter P10 latches into image mode when used with bitmap apps — need
-        // a long pause after reset before sending any real content
-        try { await BLEPrinter.printText("\x1B@"); } catch (_) {}
-        await new Promise(r => setTimeout(r, 800));
         try {
-          await BLEPrinter.printText(text);
+          await BLEPrinter.printBill(text, { cut: true, tailingLine: true });
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
           return;
         }
-        await new Promise(r => setTimeout(r, 500));
         try { await BLEPrinter.closeConn(); } catch (_) {}
       } else {
         if (!settings.wifiHost) { Alert.alert("No IP", "Enter printer IP address first."); return; }
@@ -244,7 +238,7 @@ export default function PrinterSettingsScreen() {
           return;
         }
         try {
-          await NetPrinter.printText(text);
+          await NetPrinter.printBill(text, { cut: true, tailingLine: true });
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
           return;
