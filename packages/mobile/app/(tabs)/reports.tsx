@@ -11,7 +11,7 @@ import { colors, spacing, radius } from "../../lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import { sendRawBLEPrint } from "../../lib/rawPrint";
+import { bleConnectAndPrint } from "../../lib/rawPrint";
 // Printer lib loaded lazily inside print functions to avoid startup crash
 const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 
@@ -839,14 +839,7 @@ export default function ReportsScreen() {
       const { BLEPrinter, NetPrinter } = getPrinter();
       if (printerSettings.printerType === "bluetooth") {
         if (!printerSettings.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
-        try { await BLEPrinter.init(); } catch (_) {}
-        await new Promise(r => setTimeout(r, 300));
-        try { await BLEPrinter.closeConn(); } catch (_) {}
-        await new Promise(r => setTimeout(r, 300));
-        await BLEPrinter.connectPrinter(printerSettings.printerAddress);
-        await new Promise(r => setTimeout(r, 500));
-        await sendRawBLEPrint(BLEPrinter, text);
-        try { await BLEPrinter.closeConn(); } catch (_) {}
+        await bleConnectAndPrint(BLEPrinter, printerSettings.printerAddress, text);
       } else {
         if (!printerSettings.wifiHost) { Alert.alert("No IP", "Enter printer IP in Settings."); return; }
         await NetPrinter.init();

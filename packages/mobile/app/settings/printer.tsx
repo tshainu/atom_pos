@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { getUser } from "../../lib/auth";
 import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { colors, spacing, radius } from "../../lib/theme";
+import { bleConnectAndPrint } from "../../lib/rawPrint";
 // Printer lib loaded lazily inside print/scan functions to avoid startup crash
 const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 
@@ -208,41 +209,14 @@ export default function PrinterSettingsScreen() {
       lines.push("Test successful!\n");
       lines.push("\n\n\n\n");
 
-      // ESC @ = init, then raw text, then ESC i = full cut
-      const ESC_INIT = [0x1b, 0x40];
-      const ESC_CUT  = [0x1d, 0x56, 0x41, 0x00]; // GS V A — full cut
-      const textBytes: number[] = [];
-      for (const line of lines) {
-        for (let i = 0; i < line.length; i++) {
-          textBytes.push(line.charCodeAt(i) & 0xff);
-        }
-      }
-      const allBytes = [...ESC_INIT, ...textBytes, ...ESC_CUT];
-      // Convert to base64 for printRaw
-      const rawBase64 = btoa(String.fromCharCode(...allBytes));
-
       const { BLEPrinter, NetPrinter } = getPrinter();
       if (settings.printerType === "bluetooth") {
-        // Each call in its own try/catch — a failed step should NOT crash the app
-        try { await BLEPrinter.init(); } catch (_) {}
-        await new Promise(r => setTimeout(r, 300));
-        try { await BLEPrinter.closeConn(); } catch (_) {}
-        await new Promise(r => setTimeout(r, 300));
         try {
-          await BLEPrinter.connectPrinter(settings.printerAddress);
-        } catch (connErr: any) {
-          Alert.alert("Connection Failed", connErr?.message || "Could not connect to printer. Make sure it is on and paired.");
+          await bleConnectAndPrint(BLEPrinter, settings.printerAddress, lines.join(""));
+        } catch (e: any) {
+          Alert.alert("Print Failed", e?.message || "Could not print.");
           return;
         }
-        await new Promise(r => setTimeout(r, 500));
-        try {
-          // printRaw sends base64 bytes verbatim — no library encoding transforms
-          await BLEPrinter.printRaw(rawBase64);
-        } catch (printErr: any) {
-          Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
-          return;
-        }
-        try { await BLEPrinter.closeConn(); } catch (_) {}
       } else {
         if (!settings.wifiHost) { Alert.alert("No IP", "Enter printer IP address first."); return; }
         try { await NetPrinter.init(); } catch (_) {}

@@ -11,7 +11,7 @@ import { getUser } from "../../lib/auth";
 import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { cacheInvalidate } from "../../lib/cache";
 import { colors } from "../../lib/theme";
-import { sendRawBLEPrint } from "../../lib/rawPrint";
+import { sendRawBLEPrint, bleConnectAndPrint } from "../../lib/rawPrint";
 // Printer lib loaded lazily inside print functions to avoid startup crash
 const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 import * as Print from "expo-print";
@@ -638,24 +638,12 @@ export default function POSScreen() {
       const { BLEPrinter, NetPrinter } = getPrinter();
       if (ps.printerType === "bluetooth") {
         if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
-        try { await BLEPrinter.init(); } catch (_) {}
-        await new Promise(r => setTimeout(r, 300));
-        try { await BLEPrinter.closeConn(); } catch (_) {}
-        await new Promise(r => setTimeout(r, 300));
         try {
-          await BLEPrinter.connectPrinter(ps.printerAddress);
-        } catch (connErr: any) {
-          Alert.alert("Connection Failed", connErr?.message || "Could not connect to printer. Make sure it is on and paired.");
+          await bleConnectAndPrint(BLEPrinter, ps.printerAddress, text);
+        } catch (e: any) {
+          Alert.alert("Print Failed", e?.message || "Could not print.");
           return;
         }
-        await new Promise(r => setTimeout(r, 500));
-        try {
-          await sendRawBLEPrint(BLEPrinter, text);
-        } catch (printErr: any) {
-          Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
-          return;
-        }
-        try { await BLEPrinter.closeConn(); } catch (_) {}
       } else {
         if (!ps.wifiHost) { Alert.alert("No IP", "Enter printer IP in Settings."); return; }
         try { await NetPrinter.init(); } catch (_) {}
@@ -1546,24 +1534,12 @@ export default function POSScreen() {
                     const { BLEPrinter: BLE2, NetPrinter: Net2 } = getPrinter();
                     if (ps.printerType === "bluetooth") {
                       if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings first."); return; }
-                      try { await BLE2.init(); } catch (_) {}
-                      await new Promise(r => setTimeout(r, 300));
-                      try { await BLE2.closeConn(); } catch (_) {}
-                      await new Promise(r => setTimeout(r, 300));
                       try {
-                        await BLE2.connectPrinter(ps.printerAddress);
-                      } catch (connErr: any) {
-                        Alert.alert("Connection Failed", connErr?.message || "Could not connect to printer. Make sure it is on and paired.");
+                        await bleConnectAndPrint(BLE2, ps.printerAddress, text);
+                      } catch (e: any) {
+                        Alert.alert("Print Failed", e?.message || "Could not print.");
                         return;
                       }
-                      await new Promise(r => setTimeout(r, 500));
-                      try {
-                        await sendRawBLEPrint(BLE2, text);
-                      } catch (printErr: any) {
-                        Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
-                        return;
-                      }
-                      try { await BLE2.closeConn(); } catch (_) {}
                     } else {
                       if (!ps.wifiHost) { Alert.alert("No IP", "Enter printer IP in Settings first."); return; }
                       try { await Net2.init(); } catch (_) {}
