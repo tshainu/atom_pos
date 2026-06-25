@@ -109,7 +109,7 @@ function SalesChart({ data }: { data: ChartData }) {
             <>
               <Rect x={bx} y={by} width={76} height={26} rx={5} fill="#222" opacity={0.85} />
               <SvgText x={bx + 38} y={by + 17} fontSize="11" fill="#fff" textAnchor="middle" fontWeight="bold">
-                Rs.{p.value.toLocaleString()}
+                Rs.{(p.value ?? 0).toLocaleString()}
               </SvgText>
             </>
           );
@@ -312,7 +312,7 @@ export default function DashboardScreen() {
               <Text style={styles.sectionTitle}>Sales Insight</Text>
               {chartData && (
                 <Text style={styles.chartMeta}>
-                  Rs.{chartData.totalSales.toLocaleString()} · {chartData.totalBills} bills
+                  Rs.{(chartData.totalSales ?? 0).toLocaleString()} · {chartData.totalBills ?? 0} bills
                 </Text>
               )}
             </View>
@@ -371,7 +371,7 @@ export default function DashboardScreen() {
                   <View style={styles.barTrack}>
                     <View style={[styles.barFill, { width: `${Math.round((s.total / maxStaff) * 100)}%` }]} />
                   </View>
-                  <Text style={styles.barValue}>Rs.{s.total.toLocaleString()}</Text>
+                  <Text style={styles.barValue}>Rs.{(s.total ?? 0).toLocaleString()}</Text>
                 </View>
               ))
             )}
@@ -393,7 +393,7 @@ export default function DashboardScreen() {
                     <Text style={styles.staffName}>{s.name}</Text>
                     <Text style={styles.staffSub}>{s.count} sales</Text>
                   </View>
-                  <Text style={styles.staffAmount}>Rs.{s.total.toLocaleString()}</Text>
+                  <Text style={styles.staffAmount}>Rs.{(s.total ?? 0).toLocaleString()}</Text>
                 </View>
               ))
             )}
