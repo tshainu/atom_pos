@@ -1428,7 +1428,7 @@ The image should be square, 256x256 pixels.`;
       .orderBy(desc(schema.announcements.createdAt))
       .limit(10);
     return c.json({ announcements: rows }, 200);
-  });
+  })
 
   // ONE-TIME MIGRATION: rename all shop admin users to "admin"
   .post("/admin/migrate/fix-admin-usernames", async (c) => {
