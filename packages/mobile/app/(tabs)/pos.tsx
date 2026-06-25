@@ -11,6 +11,7 @@ import { getUser } from "../../lib/auth";
 import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { cacheInvalidate } from "../../lib/cache";
 import { colors } from "../../lib/theme";
+import { sendRawBLEPrint } from "../../lib/rawPrint";
 // Printer lib loaded lazily inside print functions to avoid startup crash
 const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 import * as Print from "expo-print";
@@ -649,7 +650,7 @@ export default function POSScreen() {
         }
         await new Promise(r => setTimeout(r, 500));
         try {
-          await BLEPrinter.printBill(text, { cut: true, tailingLine: true });
+          await sendRawBLEPrint(BLEPrinter, text);
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
           return;
@@ -1557,7 +1558,7 @@ export default function POSScreen() {
                       }
                       await new Promise(r => setTimeout(r, 500));
                       try {
-                        await BLE2.printBill(text, { cut: true, tailingLine: true });
+                        await sendRawBLEPrint(BLE2, text);
                       } catch (printErr: any) {
                         Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
                         return;

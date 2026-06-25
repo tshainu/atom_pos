@@ -184,28 +184,42 @@ export default function PrinterSettingsScreen() {
       const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
       const SEP = "================================\n";
 
-      // Plain text only — no ESC/POS commands — to verify printer accepts text
-      // Commands will be re-added once plain text is confirmed working
-      let text = "";
-      text += "ATOM POS - PRINTER TEST\n";
-      text += SEP;
-      if (user?.shopName) text += `Shop: ${user.shopName}\n`;
-      text += `Date: ${dateStr}  ${timeStr}\n`;
-      text += `Paper: ${settings.paperWidth}\n`;
-      text += `Type : ${settings.printerType === "bluetooth" ? "Bluetooth" : "Wi-Fi"}\n`;
-      if (settings.printerAddress) text += `MAC  : ${settings.printerAddress}\n`;
-      text += SEP;
-      text += "Item A        x2   Rs.300\n";
-      text += "Item B        x1   Rs.350\n";
-      text += "Item C        x3   Rs.225\n";
-      text += SEP;
-      text += "Subtotal         Rs.875\n";
-      text += "Discount          Rs.50\n";
-      text += "Total            Rs.825\n";
-      text += SEP;
-      text += "ATOM POS by AxisXNOR\n";
-      text += "Test successful!\n";
-      text += "\n\n\n\n";
+      // Build raw ESC/POS bytes manually — bypasses library's iconv encoding
+      // which is suspected to corrupt text on MPrinter P10 and similar printers.
+      // We encode as pure Latin-1 (one byte per char), no iconv involved.
+      const lines: string[] = [];
+      lines.push("ATOM POS - PRINTER TEST\n");
+      lines.push("================================\n");
+      if (user?.shopName) lines.push(`Shop: ${user.shopName}\n`);
+      lines.push(`Date: ${dateStr}  ${timeStr}\n`);
+      lines.push(`Paper: ${settings.paperWidth}\n`);
+      lines.push(`Type : ${settings.printerType === "bluetooth" ? "Bluetooth" : "Wi-Fi"}\n`);
+      if (settings.printerAddress) lines.push(`MAC  : ${settings.printerAddress}\n`);
+      lines.push("================================\n");
+      lines.push("Item A        x2   Rs.300\n");
+      lines.push("Item B        x1   Rs.350\n");
+      lines.push("Item C        x3   Rs.225\n");
+      lines.push("================================\n");
+      lines.push("Subtotal         Rs.875\n");
+      lines.push("Discount          Rs.50\n");
+      lines.push("Total            Rs.825\n");
+      lines.push("================================\n");
+      lines.push("ATOM POS by AxisXNOR\n");
+      lines.push("Test successful!\n");
+      lines.push("\n\n\n\n");
+
+      // ESC @ = init, then raw text, then ESC i = full cut
+      const ESC_INIT = [0x1b, 0x40];
+      const ESC_CUT  = [0x1d, 0x56, 0x41, 0x00]; // GS V A — full cut
+      const textBytes: number[] = [];
+      for (const line of lines) {
+        for (let i = 0; i < line.length; i++) {
+          textBytes.push(line.charCodeAt(i) & 0xff);
+        }
+      }
+      const allBytes = [...ESC_INIT, ...textBytes, ...ESC_CUT];
+      // Convert to base64 for printRaw
+      const rawBase64 = btoa(String.fromCharCode(...allBytes));
 
       const { BLEPrinter, NetPrinter } = getPrinter();
       if (settings.printerType === "bluetooth") {
@@ -222,7 +236,8 @@ export default function PrinterSettingsScreen() {
         }
         await new Promise(r => setTimeout(r, 500));
         try {
-          await BLEPrinter.printBill(text, { cut: true, tailingLine: true });
+          // printRaw sends base64 bytes verbatim — no library encoding transforms
+          await BLEPrinter.printRaw(rawBase64);
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
           return;
@@ -238,7 +253,7 @@ export default function PrinterSettingsScreen() {
           return;
         }
         try {
-          await NetPrinter.printBill(text, { cut: true, tailingLine: true });
+          await NetPrinter.printBill(lines.join(""), { cut: true, tailingLine: true });
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
           return;
