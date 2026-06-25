@@ -279,6 +279,11 @@ export default function PrinterSettingsScreen() {
           return;
         }
         await new Promise(r => setTimeout(r, 400));
+        // Send a bare ESC @ reset to kick the printer out of any image/raster mode
+        // before sending the actual receipt. Some printers (e.g. MPrinter P10) latch
+        // into bitmap mode when previously used with an image-printing app.
+        try { await BLEPrinter.printText("\x1B@\x1B@"); } catch (_) {}
+        await new Promise(r => setTimeout(r, 300));
         try {
           await BLEPrinter.printText(text);
         } catch (printErr: any) {

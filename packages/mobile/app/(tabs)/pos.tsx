@@ -661,6 +661,8 @@ export default function POSScreen() {
           return;
         }
         await new Promise(r => setTimeout(r, 400));
+        try { await BLEPrinter.printText("\x1B@\x1B@"); } catch (_) {}
+        await new Promise(r => setTimeout(r, 300));
         try {
           await BLEPrinter.printText(text);
         } catch (printErr: any) {
@@ -1595,6 +1597,8 @@ export default function POSScreen() {
                         return;
                       }
                       await new Promise(r => setTimeout(r, 400));
+                      try { await BLE2.printText("\x1B@\x1B@"); } catch (_) {}
+                      await new Promise(r => setTimeout(r, 300));
                       try {
                         await BLE2.printText(text);
                       } catch (printErr: any) {
