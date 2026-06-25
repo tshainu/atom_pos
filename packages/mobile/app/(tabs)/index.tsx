@@ -39,7 +39,7 @@ interface Summary { totalSales: number; totalItems: number; totalBills: number; 
 
 // ── Mini SVG Line Chart ──────────────────────────────────────────────
 function SalesChart({ data }: { data: ChartData }) {
-  const pts = data.points;
+  const pts = (data.points ?? []).map((p) => ({ ...p, value: p.value ?? 0 }));
   if (!pts.length) return <Text style={{ color: "#aaa", textAlign: "center", paddingVertical: 30 }}>No data</Text>;
 
   const maxVal = Math.max(...pts.map((p) => p.value), 1);
@@ -266,7 +266,7 @@ export default function DashboardScreen() {
     );
   }
 
-  const maxStaff = summary?.staffSales.reduce((m, s) => Math.max(m, s.total), 1) ?? 1;
+  const maxStaff = summary?.staffSales.reduce((m, s) => Math.max(m, s.total ?? 0), 1) ?? 1;
   const activeRange = RANGES.find((r) => r.key === range);
 
   return (
