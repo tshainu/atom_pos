@@ -9,7 +9,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://atompos.up.railway.app/"
+        "EXPO_PUBLIC_API_URL": "http://69.169.97.195:8081/"
       }
     },
     "production": {
