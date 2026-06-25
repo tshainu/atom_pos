@@ -10,8 +10,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { getUser } from "../../lib/auth";
 import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { colors, spacing, radius } from "../../lib/theme";
-// @ts-ignore
-import { BLEPrinter, NetPrinter } from "react-native-thermal-receipt-printer-image-qr";
+// Printer lib loaded lazily inside print/scan functions to avoid startup crash
+const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 
 type PrinterType = "bluetooth" | "wifi";
 type PaperWidth = "58mm" | "80mm";
@@ -113,6 +113,7 @@ export default function PrinterSettingsScreen() {
     setDevices([]);
     setShowModal(true);
     try {
+      const { BLEPrinter } = getPrinter();
       await BLEPrinter.init();
       const list: BtDevice[] = await BLEPrinter.getDeviceList();
       setDevices(list || []);
@@ -201,6 +202,7 @@ export default function PrinterSettingsScreen() {
       if (settings.receiptFooter) text += ALIGN_CENTER + settings.receiptFooter + "\n" + ALIGN_LEFT;
       text += ALIGN_CENTER + "ATOM POS by AxisXNOR" + ALIGN_LEFT + "\n\n\n";
 
+      const { BLEPrinter, NetPrinter } = getPrinter();
       if (settings.printerType === "bluetooth") {
         // Each call in its own try/catch — a failed step should NOT crash the app
         try { await BLEPrinter.init(); } catch (_) {}

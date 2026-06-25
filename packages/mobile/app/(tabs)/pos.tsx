@@ -11,7 +11,8 @@ import { getUser } from "../../lib/auth";
 import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { cacheInvalidate } from "../../lib/cache";
 import { colors } from "../../lib/theme";
-import { BLEPrinter, NetPrinter } from "react-native-thermal-receipt-printer-image-qr";
+// Printer lib loaded lazily inside print functions to avoid startup crash
+const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
@@ -646,6 +647,7 @@ export default function POSScreen() {
       if (ps.receiptFooter) text += ALIGN_CENTER + ps.receiptFooter + "\r\n";
       text += ALIGN_CENTER + "ATOM POS by AxisXNOR\r\n\r\n\r\n\r\n\r\n\r\n";
       text += "\x1d\x56\x00";
+      const { BLEPrinter, NetPrinter } = getPrinter();
       if (ps.printerType === "bluetooth") {
         if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
         try { await BLEPrinter.init(); } catch {}
@@ -1556,18 +1558,19 @@ export default function POSScreen() {
                     text += ALIGN_CENTER + "ATOM POS by AxisXNOR\r\n\r\n\r\n\r\n\r\n\r\n";
                     text += "\x1d\x56\x00";
 
+                    const { BLEPrinter: BLE2, NetPrinter: Net2 } = getPrinter();
                     if (ps.printerType === "bluetooth") {
                       if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings first."); return; }
-                      try { await BLEPrinter.init(); } catch {}
-                      try { await BLEPrinter.closeConn(); } catch {}
-                      await BLEPrinter.connectPrinter(ps.printerAddress);
-                      await BLEPrinter.printText(text);
+                      try { await BLE2.init(); } catch {}
+                      try { await BLE2.closeConn(); } catch {}
+                      await BLE2.connectPrinter(ps.printerAddress);
+                      await BLE2.printText(text);
                     } else {
                       if (!ps.wifiHost) { Alert.alert("No IP", "Enter printer IP in Settings first."); return; }
-                      try { await NetPrinter.init(); } catch {}
-                      try { await NetPrinter.closeConn(); } catch {}
-                      await NetPrinter.connectPrinter(ps.wifiHost, parseInt(ps.wifiPort || "9100"));
-                      await NetPrinter.printText(text);
+                      try { await Net2.init(); } catch {}
+                      try { await Net2.closeConn(); } catch {}
+                      await Net2.connectPrinter(ps.wifiHost, parseInt(ps.wifiPort || "9100"));
+                      await Net2.printText(text);
                     }
                   } catch (e: any) {
                     Alert.alert("Print Error", e?.message || "Could not print.");

@@ -11,7 +11,8 @@ import { colors, spacing, radius } from "../../lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import { BLEPrinter, NetPrinter } from "react-native-thermal-receipt-printer-image-qr";
+// Printer lib loaded lazily inside print functions to avoid startup crash
+const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 
 type RangeKey = "today" | "yesterday" | "week" | "month" | "lastmonth" | "year" | "custom";
 type ReportTab = "sales" | "itemsales" | "items" | "creditsales" | "collections" | "staffsales";
@@ -834,6 +835,7 @@ export default function ReportsScreen() {
       setPrinting(true);
       const rangeLabel = range === "custom" ? `${customFrom} to ${customTo}` : range;
       const text = buildReportText(activeTab, reportData, rangeLabel, user?.shopName ?? "", printerSettings.paperWidth);
+      const { BLEPrinter, NetPrinter } = getPrinter();
       if (printerSettings.printerType === "bluetooth") {
         if (!printerSettings.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
         await BLEPrinter.init();
