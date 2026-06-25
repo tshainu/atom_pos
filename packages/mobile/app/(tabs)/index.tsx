@@ -266,7 +266,7 @@ export default function DashboardScreen() {
     );
   }
 
-  const maxStaff = summary?.staffSales.reduce((m, s) => Math.max(m, s.total ?? 0), 1) ?? 1;
+  const maxStaff = (summary?.staffSales ?? []).reduce((m, s) => Math.max(m, s.total ?? 0), 1) || 1;
   const activeRange = RANGES.find((r) => r.key === range);
 
   return (
