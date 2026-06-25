@@ -650,16 +650,39 @@ export default function POSScreen() {
       const { BLEPrinter, NetPrinter } = getPrinter();
       if (ps.printerType === "bluetooth") {
         if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
-        try { await BLEPrinter.init(); } catch {}
-        try { await BLEPrinter.closeConn(); } catch {}
-        await BLEPrinter.connectPrinter(ps.printerAddress);
-        await BLEPrinter.printText(text);
+        try { await BLEPrinter.init(); } catch (_) {}
+        await new Promise(r => setTimeout(r, 300));
+        try { await BLEPrinter.closeConn(); } catch (_) {}
+        await new Promise(r => setTimeout(r, 300));
+        try {
+          await BLEPrinter.connectPrinter(ps.printerAddress);
+        } catch (connErr: any) {
+          Alert.alert("Connection Failed", connErr?.message || "Could not connect to printer. Make sure it is on and paired.");
+          return;
+        }
+        await new Promise(r => setTimeout(r, 400));
+        try {
+          await BLEPrinter.printText(text);
+        } catch (printErr: any) {
+          Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
+          return;
+        }
+        try { await BLEPrinter.closeConn(); } catch (_) {}
       } else {
         if (!ps.wifiHost) { Alert.alert("No IP", "Enter printer IP in Settings."); return; }
-        try { await NetPrinter.init(); } catch {}
-        try { await NetPrinter.closeConn(); } catch {}
-        await NetPrinter.connectPrinter(ps.wifiHost, parseInt(ps.wifiPort || "9100"));
-        await NetPrinter.printText(text);
+        try { await NetPrinter.init(); } catch (_) {}
+        try {
+          await NetPrinter.connectPrinter(ps.wifiHost, parseInt(ps.wifiPort || "9100"));
+        } catch (connErr: any) {
+          Alert.alert("Connection Failed", connErr?.message || "Could not connect to Wi-Fi printer.");
+          return;
+        }
+        try {
+          await NetPrinter.printText(text);
+        } catch (printErr: any) {
+          Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
+          return;
+        }
       }
     } catch (e: any) {
       Alert.alert("Print Error", e?.message || "Could not print.");
@@ -1561,16 +1584,39 @@ export default function POSScreen() {
                     const { BLEPrinter: BLE2, NetPrinter: Net2 } = getPrinter();
                     if (ps.printerType === "bluetooth") {
                       if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings first."); return; }
-                      try { await BLE2.init(); } catch {}
-                      try { await BLE2.closeConn(); } catch {}
-                      await BLE2.connectPrinter(ps.printerAddress);
-                      await BLE2.printText(text);
+                      try { await BLE2.init(); } catch (_) {}
+                      await new Promise(r => setTimeout(r, 300));
+                      try { await BLE2.closeConn(); } catch (_) {}
+                      await new Promise(r => setTimeout(r, 300));
+                      try {
+                        await BLE2.connectPrinter(ps.printerAddress);
+                      } catch (connErr: any) {
+                        Alert.alert("Connection Failed", connErr?.message || "Could not connect to printer. Make sure it is on and paired.");
+                        return;
+                      }
+                      await new Promise(r => setTimeout(r, 400));
+                      try {
+                        await BLE2.printText(text);
+                      } catch (printErr: any) {
+                        Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
+                        return;
+                      }
+                      try { await BLE2.closeConn(); } catch (_) {}
                     } else {
                       if (!ps.wifiHost) { Alert.alert("No IP", "Enter printer IP in Settings first."); return; }
-                      try { await Net2.init(); } catch {}
-                      try { await Net2.closeConn(); } catch {}
-                      await Net2.connectPrinter(ps.wifiHost, parseInt(ps.wifiPort || "9100"));
-                      await Net2.printText(text);
+                      try { await Net2.init(); } catch (_) {}
+                      try {
+                        await Net2.connectPrinter(ps.wifiHost, parseInt(ps.wifiPort || "9100"));
+                      } catch (connErr: any) {
+                        Alert.alert("Connection Failed", connErr?.message || "Could not connect to Wi-Fi printer.");
+                        return;
+                      }
+                      try {
+                        await Net2.printText(text);
+                      } catch (printErr: any) {
+                        Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
+                        return;
+                      }
                     }
                   } catch (e: any) {
                     Alert.alert("Print Error", e?.message || "Could not print.");
