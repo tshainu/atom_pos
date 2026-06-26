@@ -41,9 +41,9 @@
       "apiUrl": "https://atompos.up.railway.app/",
       "router": {},
       "eas": {
-        "projectId": "e8993079-fe32-4f9f-95e2-44f17bbcb614"
+        "projectId": "015eca41-9ade-40f0-b530-76876dc26731"
       }
     },
-    "owner": "axisxnor"
+    "owner": "tshai"
   }
 }
