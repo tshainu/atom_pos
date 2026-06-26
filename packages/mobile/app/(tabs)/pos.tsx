@@ -11,7 +11,7 @@ import { getUser } from "../../lib/auth";
 import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { cacheInvalidate } from "../../lib/cache";
 import { colors } from "../../lib/theme";
-import { sendRawBLEPrint, bleConnectAndPrint } from "../../lib/rawPrint";
+import { bleConnectAndPrint, buildReceiptText } from "../../lib/rawPrint";
 // Printer lib loaded lazily inside print functions to avoid startup crash
 const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 import * as Print from "expo-print";
@@ -588,53 +588,27 @@ export default function POSScreen() {
         printedAt,
       };
       const ps = printerSettings;
-      const is80 = ps.paperWidth !== "58mm";
-      const colWidth = is80 ? 42 : 32;
-      const SEP_HEAVY = "=".repeat(colWidth);
-      const SEP_LIGHT = "-".repeat(colWidth);
-      const center = (s: string) => " ".repeat(Math.max(0, Math.floor((colWidth - s.length) / 2))) + s;
-      const padW = is80 ? 28 : 18;
-      const itemLines = rd.items.map((it: any, i: number) => {
-        const nc = is80 ? 20 : 14;
-        const num = `${i + 1}.`.padEnd(3);
-        const name = it.itemName.slice(0, nc).padEnd(nc);
-        const qty = `x${it.qty}`.padStart(4);
-        const price = `Rs.${(it.pricePerItem ?? (it.qty ? it.total / it.qty : it.total)).toLocaleString()}`;
-        const total = `  Total: Rs.${it.total.toLocaleString()}`;
-        return `${num}${name}${qty} ${price}\n${" ".repeat(nc + 3)}${total}`;
-      }).join("\n");
-      const payLabel = rd.isCredit ? "Credit" : (rd.paymentMethod.charAt(0).toUpperCase() + rd.paymentMethod.slice(1));
-      let text = "";
-      text += center(rd.shopName) + "\n";
-      if (rd.shopAddress) text += center(rd.shopAddress) + "\n";
-      if (rd.shopPhone) text += center(rd.shopPhone) + "\n";
-      text += SEP_LIGHT + "\n";
-      if (ps.receiptHeader) text += center(ps.receiptHeader) + "\n";
-      text += SEP_HEAVY + "\n";
-      text += `Bill: ${rd.billNumber.replace("BILL-","")}   ${rd.printedAt}\n`;
-      text += `Payment: ${payLabel}\n`;
-      text += SEP_LIGHT + "\n";
-      text += `${"No.".padEnd(3)}${"Item".padEnd(is80 ? 20 : 14)}${"Qty".padStart(4)} Price\n`;
-      text += SEP_LIGHT + "\n";
-      text += itemLines + "\n";
-      text += SEP_LIGHT + "\n";
-      text += `Subtotal:`.padEnd(padW) + `Rs.${rd.subtotal.toLocaleString()}\n`;
-      if (rd.discount > 0) text += `Discount:`.padEnd(padW) + `-Rs.${rd.discount.toLocaleString()}\n`;
-      text += `Total Payable:`.padEnd(padW) + `Rs.${rd.netPay.toLocaleString()}\n`;
-      if (!rd.isCredit) {
-        text += `Total Paid:`.padEnd(padW) + `Rs.${rd.cashPaid.toLocaleString()}\n`;
-        text += `Balance:`.padEnd(padW) + `Rs.${rd.balance.toLocaleString()}\n`;
-      }
-      if (rd.isCredit) {
-        text += SEP_LIGHT + "\n";
-        text += center("** CREDIT SALE **") + "\n";
-        if (rd.customerName) text += `Customer: ${rd.customerName}\n`;
-        if ((rd as any).customerPhone) text += `Phone:    ${(rd as any).customerPhone}\n`;
-        if ((rd as any).creditDate) text += `Due Date: ${(rd as any).creditDate}\n`;
-      }
-      text += SEP_HEAVY + "\n";
-      if (ps.receiptFooter) text += center(ps.receiptFooter) + "\n";
-      text += center("ATOM POS by AxisXNOR") + "\n";
+      const text = buildReceiptText({
+        shopName: rd.shopName,
+        shopAddress: rd.shopAddress,
+        shopPhone: rd.shopPhone,
+        receiptHeader: ps.receiptHeader,
+        receiptFooter: ps.receiptFooter,
+        paperWidth: ps.paperWidth,
+        billNumber: rd.billNumber,
+        printedAt: rd.printedAt,
+        paymentMethod: rd.paymentMethod,
+        isCredit: rd.isCredit,
+        customerName: rd.customerName,
+        customerPhone: (rd as any).customerPhone,
+        creditDate: (rd as any).creditDate,
+        items: rd.items,
+        subtotal: rd.subtotal,
+        discount: rd.discount,
+        netPay: rd.netPay,
+        cashPaid: rd.cashPaid,
+        balance: rd.balance,
+      });
       const { BLEPrinter, NetPrinter } = getPrinter();
       if (ps.printerType === "bluetooth") {
         if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
@@ -1483,53 +1457,27 @@ export default function POSScreen() {
                   if (!receiptData) return;
                   const ps = printerSettings;
                   try {
-                    const is80 = ps.paperWidth !== "58mm";
-                    const colWidth = is80 ? 42 : 32;
-                    const SEP_HEAVY = "=".repeat(colWidth);
-                    const SEP_LIGHT = "-".repeat(colWidth);
-                    const padW = is80 ? 28 : 18;
-                    const center = (s: string) => " ".repeat(Math.max(0, Math.floor((colWidth - s.length) / 2))) + s;
-                    const itemLines = receiptData.items.map((it, i) => {
-                      const nc = is80 ? 20 : 14;
-                      const num = `${i + 1}.`.padEnd(3);
-                      const name = it.itemName.slice(0, nc).padEnd(nc);
-                      const qty = `x${it.qty}`.padStart(4);
-                      const price = `Rs.${it.pricePerItem?.toLocaleString() ?? it.total.toLocaleString()}`;
-                      const total = `  Total: Rs.${it.total.toLocaleString()}`;
-                      return `${num}${name}${qty} ${price}\n${" ".repeat(nc + 3)}${total}`;
-                    }).join("\n");
-                    const pmLabel = receiptData.isCredit ? "Credit" : (receiptData.paymentMethod.charAt(0).toUpperCase() + receiptData.paymentMethod.slice(1));
-                    let text = "";
-                    text += center(receiptData.shopName) + "\n";
-                    if (receiptData.shopAddress) text += center(receiptData.shopAddress) + "\n";
-                    if (receiptData.shopPhone) text += center("Tel: " + receiptData.shopPhone) + "\n";
-                    text += SEP_LIGHT + "\n";
-                    if (ps.receiptHeader) text += center(ps.receiptHeader) + "\n";
-                    text += SEP_HEAVY + "\n";
-                    text += `Bill: ${receiptData.billNumber.replace("BILL-","")}   ${receiptData.printedAt}\n`;
-                    text += `Payment: ${pmLabel}\n`;
-                    text += SEP_LIGHT + "\n";
-                    text += `${"No.".padEnd(3)}${"Item".padEnd(is80 ? 20 : 14)}${"Qty".padStart(4)} Price\n`;
-                    text += SEP_LIGHT + "\n";
-                    text += itemLines + "\n";
-                    text += SEP_LIGHT + "\n";
-                    text += `Subtotal:`.padEnd(padW) + `Rs.${receiptData.subtotal.toLocaleString()}\n`;
-                    if (receiptData.discount > 0) text += `Discount:`.padEnd(padW) + `-Rs.${receiptData.discount.toLocaleString()}\n`;
-                    text += `Total Payable:`.padEnd(padW) + `Rs.${receiptData.netPay.toLocaleString()}\n`;
-                    if (!receiptData.isCredit) {
-                      text += `Total Paid:`.padEnd(padW) + `Rs.${receiptData.cashPaid.toLocaleString()}\n`;
-                      text += `Balance:`.padEnd(padW) + `Rs.${receiptData.balance.toLocaleString()}\n`;
-                    }
-                    if (receiptData.isCredit) {
-                      text += SEP_LIGHT + "\n";
-                      text += center("** CREDIT SALE **") + "\n";
-                      text += `Customer: ${receiptData.customerName ?? ""}\n`;
-                      if (receiptData.customerPhone) text += `Phone:    ${receiptData.customerPhone}\n`;
-                      if (receiptData.creditDate) text += `Due Date: ${receiptData.creditDate}\n`;
-                    }
-                    text += SEP_HEAVY + "\n";
-                    if (ps.receiptFooter) text += center(ps.receiptFooter) + "\n";
-                    text += center("ATOM POS by AxisXNOR") + "\n";
+                    const text = buildReceiptText({
+                      shopName: receiptData.shopName,
+                      shopAddress: receiptData.shopAddress,
+                      shopPhone: receiptData.shopPhone,
+                      receiptHeader: ps.receiptHeader,
+                      receiptFooter: ps.receiptFooter,
+                      paperWidth: ps.paperWidth,
+                      billNumber: receiptData.billNumber,
+                      printedAt: receiptData.printedAt,
+                      paymentMethod: receiptData.paymentMethod,
+                      isCredit: receiptData.isCredit,
+                      customerName: receiptData.customerName,
+                      customerPhone: receiptData.customerPhone,
+                      creditDate: receiptData.creditDate,
+                      items: receiptData.items,
+                      subtotal: receiptData.subtotal,
+                      discount: receiptData.discount,
+                      netPay: receiptData.netPay,
+                      cashPaid: receiptData.cashPaid,
+                      balance: receiptData.balance,
+                    });
 
                     const { BLEPrinter: BLE2, NetPrinter: Net2 } = getPrinter();
                     if (ps.printerType === "bluetooth") {
