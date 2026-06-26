@@ -6,7 +6,7 @@ import { cacheGet, cacheSet } from "./cache";
 const rawUrl =
   (Constants.expoConfig?.extra?.apiUrl as string | undefined) ||
   process.env.EXPO_PUBLIC_API_URL ||
-  "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site";
+  "http://69.169.97.195:8081/api";
 
 if (__DEV__) console.log("[api] baseUrl resolved to:", rawUrl, "| expoConfig.extra:", Constants.expoConfig?.extra);
 

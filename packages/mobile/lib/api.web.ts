@@ -1,7 +1,7 @@
 // On web, point to the API server (Vite/Hono backend)
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  "https://58c4ipm2bu9el237kqimq-preview-4200.runable.site";
+  "http://69.169.97.195:8081/api";
 
 export const api = {};
 
