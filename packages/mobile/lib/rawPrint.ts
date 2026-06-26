@@ -18,7 +18,7 @@ const B = {
   CENTER:      [0x1b, 0x61, 0x01],        // ESC a 1 — center align
   BOLD_ON:     [0x1b, 0x45, 0x01],        // ESC E 1 — bold on
   BOLD_OFF:    [0x1b, 0x45, 0x00],        // ESC E 0 — bold off
-  DOUBLE_ON:   [0x1d, 0x21, 0x11],        // GS ! 0x11 — double height+width
+  DOUBLE_ON:   [0x1d, 0x21, 0x01],        // GS ! 0x01 — double height only (no width — 58mm wraps with double-width)
   DOUBLE_OFF:  [0x1d, 0x21, 0x00],        // GS ! 0 — normal size
   RESET:       [0x1b, 0x61, 0x00, 0x1d, 0x21, 0x00, 0x1b, 0x45, 0x00], // left+normal+nobold
   LF:          [0x0a],                    // line feed
@@ -217,7 +217,7 @@ export function buildReceiptText(rd: ReceiptData): string {
   if (rd.discount > 0)
     t += `Discount:`.padEnd(padW) + `-Rs.${rd.discount.toLocaleString()}\n`;
   t += sep("-") + "\n";
-  t += big(`Total:`.padEnd(padW - 6) + `Rs.${rd.netPay.toLocaleString()}`) + "\n";
+  t += big(`Total: Rs.${rd.netPay.toLocaleString()}`) + "\n";
   t += sep("-") + "\n";
   if (!rd.isCredit) {
     t += `Total Paid:`.padEnd(padW) + `Rs.${rd.cashPaid.toLocaleString()}\n`;
