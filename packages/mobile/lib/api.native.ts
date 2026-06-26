@@ -21,7 +21,7 @@ async function getToken(): Promise<string | null> {
 
 async function doFetch(path: string, options: RequestInit = {}): Promise<any> {
   const token = await getToken();
-  const url = `${baseUrl}/api/${path}`;
+  const url = `${baseUrl}/${path}`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
