@@ -124,6 +124,7 @@ export const shopSettings = sqliteTable("shop_settings", {
   receiptHeader: text("receipt_header").default("Thank you for shopping!"),
   receiptFooter: text("receipt_footer").default("Visit us again"),
   showLogo: integer("show_logo", { mode: "boolean" }).default(false),
+  logoUrl: text("logo_url"),
   // WhatsApp settings
   whatsappPhone: text("whatsapp_phone"),
   whatsappEnabled: integer("whatsapp_enabled", { mode: "boolean" }).default(false),

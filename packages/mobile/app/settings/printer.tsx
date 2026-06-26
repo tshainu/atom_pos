@@ -2,8 +2,9 @@ import { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert, ActivityIndicator, Switch, FlatList, Modal, TextInput,
-  KeyboardAvoidingView, Platform, PermissionsAndroid,
+  KeyboardAvoidingView, Platform, PermissionsAndroid, Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,6 +28,7 @@ interface PrinterSettings {
   paperWidth: PaperWidth;
   receiptHeader: string;
   receiptFooter: string;
+  logoUrl: string;
 }
 
 interface BtDevice {
@@ -47,6 +49,7 @@ export default function PrinterSettingsScreen() {
     paperWidth: "58mm",
     receiptHeader: "Thank you for shopping!",
     receiptFooter: "Visit us again",
+    logoUrl: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,6 +70,7 @@ export default function PrinterSettingsScreen() {
         paperWidth: (data.settings.paperWidth as PaperWidth) ?? "58mm",
         receiptHeader: data.settings.receiptHeader ?? "Thank you for shopping!",
         receiptFooter: data.settings.receiptFooter ?? "Visit us again",
+        logoUrl: data.settings.logoUrl ?? "",
       });
     }
   };
@@ -86,6 +90,25 @@ export default function PrinterSettingsScreen() {
 
   const set = <K extends keyof PrinterSettings>(k: K, v: PrinterSettings[K]) =>
     setSettings((s) => ({ ...s, [k]: v }));
+
+  const pickLogo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Allow photo library access to upload a logo.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]?.base64) {
+      const ext = result.assets[0].mimeType?.includes("png") ? "png" : "jpeg";
+      set("logoUrl", `data:image/${ext};base64,${result.assets[0].base64}`);
+    }
+  };
 
   const scanDevices = async () => {
     // Request Bluetooth permissions on Android 12+ before calling BLEPrinter.init()
@@ -367,6 +390,40 @@ export default function PrinterSettingsScreen() {
 
           {/* Receipt messages */}
           <SectionCard title="Receipt Messages">
+            {/* Logo upload */}
+            <Field label="Receipt Logo">
+              <View style={{ alignItems: "center", gap: 8, paddingVertical: 4 }}>
+                {settings.logoUrl ? (
+                  <Image
+                    source={{ uri: settings.logoUrl }}
+                    style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 1, borderColor: colors.border }}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 1, borderColor: colors.border, backgroundColor: "#f5f5f5", alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="storefront-outline" size={32} color={colors.textSecondary} />
+                  </View>
+                )}
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}
+                    onPress={pickLogo}
+                  >
+                    <Ionicons name="image-outline" size={16} color="#fff" />
+                    <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>Upload Logo</Text>
+                  </TouchableOpacity>
+                  {settings.logoUrl ? (
+                    <TouchableOpacity
+                      style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fee2e2", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}
+                      onPress={() => set("logoUrl", "")}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#e53935" />
+                      <Text style={{ color: "#e53935", fontWeight: "600", fontSize: 13 }}>Remove</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            </Field>
             <Field label="Header">
               <TextInput
                 style={[styles.input, styles.inputMulti]}

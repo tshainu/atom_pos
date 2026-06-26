@@ -111,13 +111,14 @@ export default function POSScreen() {
     shopPhone: string;
     whatsappPhone?: string;
     printedAt: string;
+    logoUrl?: string;
   } | null>(null);
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [printerSettings, setPrinterSettings] = useState<{
     printerEnabled: boolean; printerType: "bluetooth" | "wifi";
     printerAddress: string; wifiHost: string; wifiPort: string;
-    paperWidth: string; receiptHeader: string; receiptFooter: string;
-  }>({ printerEnabled: false, printerType: "bluetooth", printerAddress: "", wifiHost: "", wifiPort: "9100", paperWidth: "80mm", receiptHeader: "", receiptFooter: "" });
+    paperWidth: string; receiptHeader: string; receiptFooter: string; logoUrl: string;
+  }>({ printerEnabled: false, printerType: "bluetooth", printerAddress: "", wifiHost: "", wifiPort: "9100", paperWidth: "80mm", receiptHeader: "", receiptFooter: "", logoUrl: "" });
 
   // Hold modal
   const [holdModal, setHoldModal] = useState(false);
@@ -158,6 +159,7 @@ export default function POSScreen() {
         paperWidth: s.paperWidth ?? "80mm",
         receiptHeader: s.receiptHeader ?? "",
         receiptFooter: s.receiptFooter ?? "",
+        logoUrl: s.logoUrl ?? "",
       });
     }
   };
@@ -423,6 +425,7 @@ export default function POSScreen() {
       shopPhone: user?.shopPhone ?? "",
       whatsappPhone,
       printedAt,
+      logoUrl: printerSettings.logoUrl ?? "",
     };
     setReceiptData(optimisticReceipt);
     setPrintModal(false);
@@ -586,6 +589,7 @@ export default function POSScreen() {
         shopAddress: user?.shopAddress ?? "",
         shopPhone: user?.shopPhone ?? "",
         printedAt,
+        logoUrl: printerSettings.logoUrl ?? "",
       };
       const ps = printerSettings;
       const text = buildReceiptText({
@@ -1336,6 +1340,15 @@ export default function POSScreen() {
             <ScrollView showsVerticalScrollIndicator={false}>
               {receiptData && (
                 <View style={styles.receiptPaper}>
+                  {/* Logo */}
+                  {receiptData.logoUrl ? (
+                    <Image
+                      source={{ uri: receiptData.logoUrl }}
+                      style={styles.rcLogo}
+                      resizeMode="contain"
+                    />
+                  ) : null}
+
                   {/* Shop Header */}
                   <Text style={styles.rcShopName}>{receiptData.shopName}</Text>
                   {receiptData.shopAddress ? (
@@ -1344,81 +1357,78 @@ export default function POSScreen() {
                   {receiptData.shopPhone ? (
                     <Text style={styles.rcShopAddr}>{receiptData.shopPhone}</Text>
                   ) : null}
-                  <Text style={styles.rcDash}>- - - - - - - - - - - - - - - - - -</Text>
+                  <Text style={styles.rcDash}>--------------------------------</Text>
 
-                  {/* Bill number + date + payment method */}
+                  {/* Invoice No + Date rows */}
                   <View style={styles.rcMetaRow}>
-                    <Text style={styles.rcMeta}>Bill: {receiptData.billNumber}</Text>
-                    <Text style={styles.rcMeta}>{receiptData.printedAt}</Text>
+                    <Text style={styles.rcMetaLabel}>Invoice No</Text>
+                    <Text style={styles.rcMetaVal}>{receiptData.billNumber}</Text>
                   </View>
-                  {!receiptData.isCredit && (
-                    <Text style={styles.rcMeta}>Payment: {receiptData.paymentMethod.charAt(0).toUpperCase() + receiptData.paymentMethod.slice(1)}</Text>
-                  )}
-                  <Text style={styles.rcDash}>- - - - - - - - - - - - - - - - - -</Text>
-
-                  {/* Items table header */}
-                  <View style={styles.rcTableHeader}>
-                    <Text style={[styles.rcTh, { flex: 0.4 }]}>No</Text>
-                    <Text style={[styles.rcTh, { flex: 2.2 }]}>Item</Text>
-                    <Text style={[styles.rcTh, { flex: 0.7, textAlign: "center" }]}>Qty</Text>
-                    <Text style={[styles.rcTh, { flex: 1, textAlign: "right" }]}>Price</Text>
-                    <Text style={[styles.rcTh, { flex: 1.1, textAlign: "right" }]}>Amt</Text>
+                  <View style={styles.rcMetaRow}>
+                    <Text style={styles.rcMetaLabel}>Date</Text>
+                    <Text style={styles.rcMetaVal}>{receiptData.printedAt}</Text>
                   </View>
-                  <Text style={styles.rcDash}>- - - - - - - - - - - - - - - - - -</Text>
+                  <Text style={styles.rcDash}>--------------------------------</Text>
 
-                  {/* Items */}
-                  {receiptData.items.map((item, idx) => (
-                    <View key={idx} style={styles.rcItemRow}>
-                      <Text style={[styles.rcTd, { flex: 0.4 }]}>{idx + 1}</Text>
-                      <Text style={[styles.rcTd, { flex: 2.2 }]} numberOfLines={1}>{item.itemName}</Text>
-                      <Text style={[styles.rcTd, { flex: 0.7, textAlign: "center" }]}>{item.qty}</Text>
-                      <Text style={[styles.rcTd, { flex: 1, textAlign: "right" }]}>{item.pricePerItem.toLocaleString()}</Text>
-                      <Text style={[styles.rcTd, { flex: 1.1, textAlign: "right", fontWeight: "700" }]}>{item.total.toLocaleString()}</Text>
-                    </View>
-                  ))}
+                  {/* Items — thermal style: #N. Name / qty x price ..... total */}
+                  {receiptData.items.map((item, idx) => {
+                    const totalStr = `Rs.${item.total.toFixed(2)}`;
+                    return (
+                      <View key={idx} style={styles.rcItemBlock}>
+                        <Text style={styles.rcItemName}>#{idx + 1}. {item.itemName}</Text>
+                        <View style={styles.rcItemDetailRow}>
+                          <Text style={styles.rcItemDetail}>
+                            {item.qty.toFixed ? item.qty.toFixed(2) : item.qty} x Rs.{item.pricePerItem.toFixed(2)}
+                          </Text>
+                          <Text style={styles.rcItemDots} numberOfLines={1}>{".".repeat(20)}</Text>
+                          <Text style={styles.rcItemTotal}>{totalStr}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
 
-                  <Text style={styles.rcDash}>- - - - - - - - - - - - - - - - - -</Text>
+                  <Text style={styles.rcDash}>--------------------------------</Text>
 
                   {/* Totals */}
                   <View style={styles.rcTotalRow}>
-                    <Text style={styles.rcTotalLabel}>Sub Total</Text>
-                    <Text style={styles.rcTotalVal}>Rs. {receiptData.subtotal.toLocaleString()}</Text>
+                    <Text style={styles.rcTotalLabel}>Subtotal</Text>
+                    <Text style={styles.rcTotalVal}>Rs. {receiptData.subtotal.toFixed(2)}</Text>
                   </View>
                   {receiptData.discount > 0 && (
                     <View style={styles.rcTotalRow}>
                       <Text style={styles.rcTotalLabel}>Discount</Text>
-                      <Text style={[styles.rcTotalVal, { color: "#e53935" }]}>- Rs. {receiptData.discount.toLocaleString()}</Text>
+                      <Text style={[styles.rcTotalVal, { color: "#e53935" }]}>- Rs. {receiptData.discount.toFixed(2)}</Text>
                     </View>
                   )}
                   <View style={[styles.rcTotalRow, styles.rcNetPayRow]}>
-                    <Text style={styles.rcNetPayLabel}>Net Pay</Text>
-                    <Text style={styles.rcNetPayVal}>Rs. {receiptData.netPay.toLocaleString()}</Text>
+                    <Text style={styles.rcNetPayLabel}>Total</Text>
+                    <Text style={styles.rcNetPayVal}>Rs. {receiptData.netPay.toFixed(2)}</Text>
                   </View>
 
                   {/* Payment details */}
-                  <Text style={styles.rcDash}>- - - - - - - - - - - - - - - - - -</Text>
                   {!receiptData.isCredit ? (
                     <>
                       <View style={styles.rcTotalRow}>
-                        <Text style={styles.rcTotalLabel}>Payment Method</Text>
-                        <Text style={[styles.rcTotalVal, { textTransform: "capitalize" }]}>{receiptData.paymentMethod}</Text>
+                        <Text style={styles.rcTotalLabel}>
+                          Cash ({receiptData.paymentMethod.charAt(0).toUpperCase() + receiptData.paymentMethod.slice(1)}) {receiptData.printedAt}
+                        </Text>
                       </View>
                       <View style={styles.rcTotalRow}>
                         <Text style={styles.rcTotalLabel}>Total Paid</Text>
-                        <Text style={styles.rcTotalVal}>Rs. {receiptData.cashPaid.toLocaleString()}</Text>
+                        <Text style={styles.rcTotalVal}>Rs. {receiptData.cashPaid.toFixed(2)}</Text>
                       </View>
                       <View style={styles.rcTotalRow}>
-                        <Text style={styles.rcTotalLabel}>Balance</Text>
+                        <Text style={styles.rcTotalLabel}>{receiptData.balance >= 0 ? "Balance" : "Due"}</Text>
                         <Text style={[styles.rcTotalVal, { color: receiptData.balance >= 0 ? "#16a34a" : "#e53935", fontWeight: "800" }]}>
-                          Rs. {Math.abs(receiptData.balance).toLocaleString()}
+                          Rs. {Math.abs(receiptData.balance).toFixed(2)}
                         </Text>
                       </View>
                     </>
                   ) : (
                     <>
-                      <View style={[styles.rcTotalRow, { backgroundColor: "#FFF7ED", borderRadius: 6, paddingHorizontal: 8 }]}>
+                      <View style={[styles.rcTotalRow, { backgroundColor: "#FFF7ED", borderRadius: 6, paddingHorizontal: 8, marginVertical: 2 }]}>
                         <Text style={[styles.rcTotalLabel, { color: "#EA580C", fontWeight: "700" }]}>⚠ CREDIT SALE</Text>
-                        <Text style={[styles.rcTotalVal, { color: "#EA580C" }]}>Rs. {receiptData.netPay.toLocaleString()}</Text>
+                        <Text style={[styles.rcTotalVal, { color: "#EA580C" }]}>Rs. {receiptData.netPay.toFixed(2)}</Text>
                       </View>
                       {receiptData.customerName ? (
                         <View style={styles.rcTotalRow}>
@@ -1435,8 +1445,11 @@ export default function POSScreen() {
                     </>
                   )}
 
-                  <Text style={styles.rcDash}>- - - - - - - - - - - - - - - - - -</Text>
-                  <Text style={styles.rcFooter}>Thank you! Come again</Text>
+                  <Text style={styles.rcDash}>--------------------------------</Text>
+                  {printerSettings.receiptFooter ? (
+                    <Text style={styles.rcFooter}>{printerSettings.receiptFooter}</Text>
+                  ) : null}
+                  <Text style={styles.rcFooter}>Thank you for your Trust!</Text>
                   <Text style={styles.rcFooterSub}>ATOM POS by AxisXNOR</Text>
                 </View>
               )}
@@ -1860,22 +1873,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#fffef8", padding: 18,
     fontFamily: "monospace",
   },
-  rcShopName: { fontSize: 20, fontWeight: "bold", color: "#111", textAlign: "center", letterSpacing: 0.5, marginBottom: 2 },
+  rcLogo: { width: 72, height: 72, borderRadius: 36, alignSelf: "center", marginBottom: 8 },
+  rcShopName: { fontSize: 18, fontWeight: "900", color: "#111", textAlign: "center", letterSpacing: 0.5, marginBottom: 2, textTransform: "uppercase" },
   rcShopAddr: { fontSize: 11, color: "#555", textAlign: "center", marginBottom: 1 },
-  rcDash: { fontSize: 10, color: "#bbb", letterSpacing: 1, textAlign: "center", marginVertical: 6 },
-  rcMetaRow: { flexDirection: "row", justifyContent: "space-between" },
-  rcMeta: { fontSize: 10, color: "#666" },
-  rcTableHeader: { flexDirection: "row", paddingVertical: 4 },
-  rcTh: { fontSize: 10, fontWeight: "800", color: "#333", textTransform: "uppercase" },
-  rcItemRow: { flexDirection: "row", paddingVertical: 3 },
-  rcTd: { fontSize: 11, color: "#333" },
-  rcTotalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 3 },
-  rcTotalLabel: { fontSize: 12, color: "#555" },
-  rcTotalVal: { fontSize: 12, color: "#222", fontWeight: "600" },
-  rcNetPayRow: { backgroundColor: "#f0faf8", borderRadius: 6, paddingHorizontal: 8, marginVertical: 3 },
-  rcNetPayLabel: { fontSize: 14, fontWeight: "800", color: colors.primary },
+  rcDash: { fontSize: 10, color: "#aaa", textAlign: "center", marginVertical: 5, fontFamily: "monospace" },
+  rcMetaRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
+  rcMetaLabel: { fontSize: 11, color: "#666", fontWeight: "600" },
+  rcMetaVal: { fontSize: 11, color: "#222", fontWeight: "700" },
+  rcItemBlock: { marginVertical: 3 },
+  rcItemName: { fontSize: 11, fontWeight: "700", color: "#222" },
+  rcItemDetailRow: { flexDirection: "row", alignItems: "center" },
+  rcItemDetail: { fontSize: 10, color: "#555", minWidth: 90 },
+  rcItemDots: { flex: 1, fontSize: 10, color: "#bbb", overflow: "hidden" },
+  rcItemTotal: { fontSize: 11, fontWeight: "700", color: "#111", minWidth: 60, textAlign: "right" },
+  rcTotalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
+  rcTotalLabel: { fontSize: 11, color: "#555", flex: 1 },
+  rcTotalVal: { fontSize: 11, color: "#222", fontWeight: "600" },
+  rcNetPayRow: { backgroundColor: "#f0faf8", borderRadius: 6, paddingHorizontal: 8, marginVertical: 3, paddingVertical: 4 },
+  rcNetPayLabel: { fontSize: 14, fontWeight: "900", color: colors.primary },
   rcNetPayVal: { fontSize: 14, fontWeight: "900", color: colors.primary },
-  rcFooter: { fontSize: 13, fontWeight: "700", color: "#333", textAlign: "center", alignSelf: "stretch", marginTop: 6 },
+  rcFooter: { fontSize: 12, fontWeight: "700", color: "#333", textAlign: "center", alignSelf: "stretch", marginTop: 4 },
   rcFooterSub: { fontSize: 10, color: "#aaa", textAlign: "center", alignSelf: "stretch", marginTop: 2 },
   rcActions: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "#eee" },
   rcActionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 14 },

@@ -40,8 +40,14 @@ function strToBytes(s: string): number[] {
 
 /**
  * Parse tagged receipt text into ESC/POS bytes.
- * Tags: <B></B> bold, <D></D> double size, <C></C> center, <L></L> left
- * Tags must wrap entire lines (no mid-line mixing).
+ * Tags (wrap entire lines, no mid-line mixing):
+ *   <B>   bold
+ *   <D>   double height (implies bold)
+ *   <C>   center align
+ *   <CB>  center + bold
+ *   <CD>  center + double (implies bold)
+ *   <R>   right align
+ *   <L>   left align (default)
  */
 export function buildRawBase64(text: string): string {
   const bytes: number[] = [...B.INIT, ...B.LEFT];
@@ -54,26 +60,34 @@ export function buildRawBase64(text: string): string {
     let isCenter = false;
     let isRight = false;
 
-    // Extract formatting tags
-    if (line.includes("<B>") && line.includes("</B>")) {
-      isBold = true;
-      line = line.replace(/<\/?B>/g, "");
-    }
-    if (line.includes("<D>") && line.includes("</D>")) {
-      isDouble = true;
-      isBold = true; // double implies bold
-      line = line.replace(/<\/?D>/g, "");
-    }
-    if (line.includes("<C>") && line.includes("</C>")) {
-      isCenter = true;
-      line = line.replace(/<\/?C>/g, "");
-    }
-    if (line.includes("<R>") && line.includes("</R>")) {
-      isRight = true;
-      line = line.replace(/<\/?R>/g, "");
-    }
-    if (line.includes("<L>") && line.includes("</L>")) {
-      line = line.replace(/<\/?L>/g, "");
+    // Combined tags first
+    if (line.includes("<CD>") && line.includes("</CD>")) {
+      isCenter = true; isDouble = true; isBold = true;
+      line = line.replace(/<\/?CD>/g, "");
+    } else if (line.includes("<CB>") && line.includes("</CB>")) {
+      isCenter = true; isBold = true;
+      line = line.replace(/<\/?CB>/g, "");
+    } else {
+      // Single tags
+      if (line.includes("<B>") && line.includes("</B>")) {
+        isBold = true;
+        line = line.replace(/<\/?B>/g, "");
+      }
+      if (line.includes("<D>") && line.includes("</D>")) {
+        isDouble = true; isBold = true;
+        line = line.replace(/<\/?D>/g, "");
+      }
+      if (line.includes("<C>") && line.includes("</C>")) {
+        isCenter = true;
+        line = line.replace(/<\/?C>/g, "");
+      }
+      if (line.includes("<R>") && line.includes("</R>")) {
+        isRight = true;
+        line = line.replace(/<\/?R>/g, "");
+      }
+      if (line.includes("<L>") && line.includes("</L>")) {
+        line = line.replace(/<\/?L>/g, "");
+      }
     }
 
     // Apply alignment
@@ -93,7 +107,7 @@ export function buildRawBase64(text: string): string {
     bytes.push(...B.LF);
   }
 
-  // Small feed before cut (1 line instead of 4)
+  // Small feed before cut
   bytes.push(...B.LF);
   bytes.push(...B.CUT);
 
@@ -170,24 +184,26 @@ export function buildReceiptText(rd: ReceiptData): string {
   const is80 = rd.paperWidth !== "58mm";
   const colWidth = is80 ? 42 : 32;
 
-  const sep  = (ch: string, b = false) => b ? `<B>${ch.repeat(colWidth)}</B>` : ch.repeat(colWidth);
-  const ctr  = (s: string)  => `<C>${s}</C>`;
-  const bold = (s: string)  => `<B>${s}</B>`;
-  const big  = (s: string)  => `<D>${s}</D>`;
+  const sep   = (ch: string) => ch.repeat(colWidth);
+  const ctrB  = (s: string)  => `<CB>${s}</CB>`;
+  const ctr   = (s: string)  => `<C>${s}</C>`;
+  const bold  = (s: string)  => `<B>${s}</B>`;
+  const big   = (s: string)  => `<CD>${s}</CD>`;
 
-  // label on the left, value flush right within the full line width
   const lr = (label: string, value: string) => {
     const space = Math.max(1, colWidth - label.length - value.length);
     return label + " ".repeat(space) + value;
   };
+  const lrBold = (label: string, value: string) => bold(lr(label, value));
 
-  // Items:  "<n>. <Name>"  then  "<unit> x <qty>   :   Rs.<total>"
+  // Items: "#1. Item Name" then "  qty.00 x price.00.....total.00"
   const itemLines = rd.items.map((it, i) => {
-    const unit = it.pricePerItem ?? (it.qty ? Math.round(it.total / it.qty) : it.total);
-    const head = `${i + 1}. ${it.itemName}`;
-    const left  = `${unit.toLocaleString()} x ${it.qty}`;
-    const right = `Rs.${it.total.toLocaleString()}`;
-    const line2 = lr(`   ${left}   :`, right);
+    const unit  = it.pricePerItem ?? (it.qty ? Math.round(it.total / it.qty) : it.total);
+    const head  = `#${i + 1}. ${it.itemName}`;
+    const left  = `  ${it.qty}.00 x ${unit.toLocaleString()}.00`;
+    const right = `${it.total.toLocaleString()}.00`;
+    const dots  = ".".repeat(Math.max(1, colWidth - left.length - right.length));
+    const line2 = `${left}${dots}${right}`;
     return `${head}\n${line2}`;
   }).join("\n");
 
@@ -197,57 +213,59 @@ export function buildReceiptText(rd: ReceiptData): string {
 
   const billNo = rd.billNumber.replace("BILL-", "");
 
-  // items title columns
-  const nc = is80 ? 18 : 13;
-  const titleLine = `${"No.".padEnd(4)}${"Item".padEnd(nc)}${"Qty".padStart(4)}  ${"Price"}`;
-
   let t = "";
 
-  // ── Header (centered + bold) ──
-  t += ctr(bold(rd.shopName)) + "\n";
-  if (rd.shopAddress) t += ctr(bold(rd.shopAddress)) + "\n";
-  if (rd.shopPhone)   t += ctr(bold("Tel: " + rd.shopPhone)) + "\n";
-  t += sep("=") + "\n";
+  // ── Header ──
+  t += ctrB(rd.shopName) + "\n";
+  if (rd.shopAddress) t += ctr(rd.shopAddress) + "\n";
+  if (rd.shopPhone)   t += ctr(rd.shopPhone) + "\n";
+  t += sep("-") + "\n";
   if (rd.receiptHeader) t += ctr(rd.receiptHeader) + "\n";
 
-  // ── Bill info (gap between bill no and date/time) ──
-  t += bold(lr(`Bill: ${billNo}`, rd.printedAt)) + "\n";
-  t += `Payment: ${pmLabel}\n`;
-  t += sep("-", true) + "\n";
-
-  // ── Items header (bold, spaced) ──
-  t += bold(titleLine) + "\n";
-  t += sep("-", true) + "\n";
+  // ── Invoice info ──
+  t += lr("Invoice No.", billNo) + "\n";
+  t += lr("Date", rd.printedAt) + "\n";
+  if (rd.isCredit && rd.customerName) {
+    t += bold("Customer") + "\n";
+    t += rd.customerName + "\n";
+    if (rd.customerPhone) t += `Mobile: ${rd.customerPhone}\n`;
+  }
+  t += sep(".") + "\n";
 
   // ── Items ──
   t += itemLines + "\n";
-  t += sep("-", true) + "\n";
+  t += sep(".") + "\n";
 
-  // ── Totals (values right-aligned) ──
-  t += lr("Subtotal:", `Rs.${rd.subtotal.toLocaleString()}`) + "\n";
-  if (rd.discount > 0)
-    t += lr("Discount:", `-Rs.${rd.discount.toLocaleString()}`) + "\n";
-  t += sep("-", true) + "\n";
-  t += big(lr("Total:", `Rs.${rd.netPay.toLocaleString()}`)) + "\n";
-  t += sep("-", true) + "\n";
+  // ── Totals ──
+  if (rd.subtotal !== rd.netPay || rd.discount > 0) {
+    t += lrBold("Subtotal:", `Rs ${rd.subtotal.toLocaleString()}.00`) + "\n";
+  }
+  if (rd.discount > 0) {
+    t += lr("Discount:", `-Rs ${rd.discount.toLocaleString()}.00`) + "\n";
+  }
+  t += lrBold("Total:", `Rs ${rd.netPay.toLocaleString()}.00`) + "\n";
+
   if (!rd.isCredit) {
-    t += lr("Total Paid:", `Rs.${rd.cashPaid.toLocaleString()}`) + "\n";
-    t += lr("Balance:",    `Rs.${rd.balance.toLocaleString()}`) + "\n";
+    t += lr(`${pmLabel} (${rd.printedAt.split(" ")[0]})`, `Rs ${rd.cashPaid.toLocaleString()}.00`) + "\n";
+    t += lr("Total Paid", `Rs ${rd.cashPaid.toLocaleString()}.00`) + "\n";
+    const due = rd.cashPaid - rd.netPay;
+    if (due < 0) {
+      t += lr("Total Due", `Rs ${Math.abs(due).toLocaleString()}.00`) + "\n";
+    } else if (due > 0) {
+      t += lr("Balance", `Rs ${due.toLocaleString()}.00`) + "\n";
+    }
   }
 
-  // ── Credit block ──
   if (rd.isCredit) {
-    t += sep("=") + "\n";
-    t += ctr(bold("** CREDIT SALE **")) + "\n";
-    if (rd.customerName)  t += `Customer: ${rd.customerName}\n`;
-    if (rd.customerPhone) t += `Phone:    ${rd.customerPhone}\n`;
-    if (rd.creditDate)    t += `Due Date: ${rd.creditDate}\n`;
+    t += sep("-") + "\n";
+    t += ctrB("** CREDIT SALE **") + "\n";
+    if (rd.creditDate) t += lr("Due Date:", rd.creditDate) + "\n";
   }
 
-  // ── Footer (centered) ──
-  t += sep("=") + "\n";
+  // ── Footer ──
+  t += sep("-") + "\n";
   if (rd.receiptFooter) t += ctr(rd.receiptFooter) + "\n";
-  t += ctr("ATOM POS by AxisXNOR") + "\n";
+  t += ctr("Thank you for your Trust!") + "\n";
 
   return t;
 }
