@@ -4,7 +4,6 @@ import {
   ScrollView, Alert, ActivityIndicator, Switch, FlatList, Modal, TextInput,
   KeyboardAvoidingView, Platform, PermissionsAndroid, Image,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -92,6 +91,8 @@ export default function PrinterSettingsScreen() {
     setSettings((s) => ({ ...s, [k]: v }));
 
   const pickLogo = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ImagePicker = require("expo-image-picker");
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert("Permission needed", "Allow photo library access to upload a logo.");
