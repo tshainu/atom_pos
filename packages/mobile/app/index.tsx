@@ -9,7 +9,7 @@ const { width: SW, height: SH } = Dimensions.get("window");
 export default function SplashScreen() {
   useEffect(() => {
     const check = async () => {
-      await new Promise((r) => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 500));
       const existing = await getToken();
       if (existing) {
         router.replace("/(tabs)");

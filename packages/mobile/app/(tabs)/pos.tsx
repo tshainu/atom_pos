@@ -1651,7 +1651,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, gap: 8,
   },
   headerLeft: { flex: 1, gap: 5 },
-  headerShopName: { fontSize: 15, fontWeight: "900", color: "#fff", letterSpacing: 0.5 },
+  headerShopName: { fontSize: 18, fontWeight: "bold", color: "#fff", letterSpacing: 0.5, textAlign: "center" },
   searchBox: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 8,
@@ -1860,7 +1860,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fffef8", padding: 18,
     fontFamily: "monospace",
   },
-  rcShopName: { fontSize: 17, fontWeight: "900", color: "#111", textAlign: "center", letterSpacing: 0.5, marginBottom: 2 },
+  rcShopName: { fontSize: 20, fontWeight: "bold", color: "#111", textAlign: "center", letterSpacing: 0.5, marginBottom: 2 },
   rcShopAddr: { fontSize: 11, color: "#555", textAlign: "center", marginBottom: 1 },
   rcDash: { fontSize: 10, color: "#bbb", letterSpacing: 1, textAlign: "center", marginVertical: 6 },
   rcMetaRow: { flexDirection: "row", justifyContent: "space-between" },
