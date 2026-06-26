@@ -1352,19 +1352,19 @@ export default function POSScreen() {
                   ) : null}
 
                   {/* Shop Header */}
-                  <Text style={styles.rcShopName}>{receiptData.shopName}</Text>
-                  {receiptData.shopAddress ? (
-                    <Text style={styles.rcShopAddr}>{receiptData.shopAddress}</Text>
-                  ) : null}
-                  {receiptData.shopPhone ? (
-                    <Text style={styles.rcShopAddr}>{receiptData.shopPhone}</Text>
-                  ) : null}
-                  <Text style={styles.rcDash}>--------------------------------</Text>
-
-                  {/* Receipt header message */}
-                  {receiptData.receiptHeader ? (
-                    <Text style={styles.rcHeaderMsg}>{receiptData.receiptHeader}</Text>
-                  ) : null}
+                  <View style={{ width: "100%", alignItems: "center" }}>
+                    <Text style={styles.rcShopName}>{receiptData.shopName}</Text>
+                    {receiptData.shopAddress ? (
+                      <Text style={styles.rcShopAddr}>{receiptData.shopAddress}</Text>
+                    ) : null}
+                    {receiptData.shopPhone ? (
+                      <Text style={styles.rcShopAddr}>{receiptData.shopPhone}</Text>
+                    ) : null}
+                    <Text style={styles.rcDash}>--------------------------------</Text>
+                    {receiptData.receiptHeader ? (
+                      <Text style={styles.rcHeaderMsg}>{receiptData.receiptHeader}</Text>
+                    ) : null}
+                  </View>
 
                   {/* Invoice No + Date rows */}
                   <View style={styles.rcMetaRow}>
@@ -1452,12 +1452,14 @@ export default function POSScreen() {
                     </>
                   )}
 
-                  <Text style={styles.rcDash}>--------------------------------</Text>
-                  {printerSettings.receiptFooter ? (
-                    <Text style={styles.rcFooter}>{printerSettings.receiptFooter}</Text>
-                  ) : null}
-                  <Text style={styles.rcFooter}>Thank you for your Trust!</Text>
-                  <Text style={styles.rcFooterSub}>ATOM POS by AxisXNOR</Text>
+                  <View style={{ width: "100%", alignItems: "center" }}>
+                    <Text style={styles.rcDash}>--------------------------------</Text>
+                    {printerSettings.receiptFooter ? (
+                      <Text style={styles.rcFooter}>{printerSettings.receiptFooter}</Text>
+                    ) : null}
+                    <Text style={styles.rcFooter}>Thank you for your Trust!</Text>
+                    <Text style={styles.rcFooterSub}>ATOM POS by AxisXNOR</Text>
+                  </View>
                 </View>
               )}
             </ScrollView>
@@ -1877,8 +1879,7 @@ const styles = StyleSheet.create({
     overflow: "hidden", alignSelf: "stretch",
   },
   receiptPaper: {
-    backgroundColor: "#fffef8", padding: 18, width: "100%",
-    fontFamily: "monospace",
+    backgroundColor: "#fffef8", padding: 18, width: "100%", alignSelf: "stretch",
   },
   rcLogo: { width: 72, height: 72, borderRadius: 36, alignSelf: "center", marginBottom: 8 },
   rcShopName: { fontSize: 22, fontWeight: "bold", color: "#111", textAlign: "center", letterSpacing: 0.5, marginBottom: 2, textTransform: "uppercase" },
