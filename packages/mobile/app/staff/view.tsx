@@ -12,7 +12,7 @@ export default function ViewStaffScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch(`users/${id}`).then((d) => {
+    apiFetch(`users/${id}`).then((d: any) => {
       if (!d.error) setStaff(d.user);
       setLoading(false);
     });

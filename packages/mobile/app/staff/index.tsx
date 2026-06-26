@@ -47,7 +47,7 @@ export default function StaffScreen() {
     const cached = await cachedFetchAsync(`users?shopId=${u.shopId}`, force ? 0 : undefined);
     if (cached && !cached.error) { setStaff(cached.users ?? []); setLoading(false); }
     if (!force) {
-      apiFetch(`users?shopId=${u.shopId}`).then((data) => {
+      apiFetch(`users?shopId=${u.shopId}`).then((data: any) => {
         if (!data.error) setStaff(data.users ?? []);
         setLoading(false);
       });

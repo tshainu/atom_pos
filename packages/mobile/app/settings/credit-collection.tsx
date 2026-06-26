@@ -50,7 +50,7 @@ export default function CreditCollectionScreen() {
     if (!u) { setLoading(false); return; }
     const cached = await cachedFetchAsync(`credit-sales?shopId=${u.shopId}`);
     if (cached) { applyData(cached); setLoading(false); }
-    apiFetch(`credit-sales?shopId=${u.shopId}`).then((data) => { applyData(data); setLoading(false); });
+    apiFetch(`credit-sales?shopId=${u.shopId}`).then((data: any) => { applyData(data); setLoading(false); });
   };
 
   useEffect(() => { load(); }, []);

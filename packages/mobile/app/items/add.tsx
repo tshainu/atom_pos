@@ -55,7 +55,7 @@ export default function AddItemScreen() {
         setLoadingCats(false);
       }
       // Refresh in background
-      apiFetch(`categories?shopId=${u?.shopId}`).then((data) => {
+      apiFetch(`categories?shopId=${u?.shopId}`).then((data: any) => {
         if (data.categories) {
           setCategories(data.categories);
           if (data.categories.length > 0 && !selectedCategory) setSelectedCategory(data.categories[0].name);
@@ -195,7 +195,7 @@ export default function AddItemScreen() {
             name: name.trim(),
             category: selectedCategory || "General",
           }),
-        }).then((aiData) => {
+        }).then((aiData: any) => {
           if (aiData?.iconUrl) {
             apiFetch(`items/${savedItemId}`, {
               method: "PATCH",

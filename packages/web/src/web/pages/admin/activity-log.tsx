@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { adminGetActivityLog, adminGetShops } from "../../lib/adminApi";
 
-const TEAL = "#2BBFB3";
+// const TEAL = "#2BBFB3"; // unused
 
 function fmt(ts: any): string {
   if (!ts) return "-";

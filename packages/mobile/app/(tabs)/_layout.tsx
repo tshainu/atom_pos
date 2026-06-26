@@ -26,7 +26,7 @@ function TabIcon({ source, focused, size }: { source: any; focused: boolean; siz
 
 function DashboardTitle() {
   const [shopName, setShopName] = useState<string | null>(null);
-  useEffect(() => { getUser().then((u) => setShopName(u?.shopName ?? null)); }, []);
+  useEffect(() => { getUser().then((u: any) => setShopName(u?.shopName ?? null)); }, []);
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
       <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 17 }}>Dashboard</Text>

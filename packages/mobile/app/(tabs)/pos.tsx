@@ -11,7 +11,7 @@ import { getUser } from "../../lib/auth";
 import { apiFetch, cachedFetchAsync } from "../../lib/api";
 import { cacheInvalidate } from "../../lib/cache";
 import { colors } from "../../lib/theme";
-import { bleConnectAndPrint, buildReceiptText } from "../../lib/rawPrint";
+import { bleConnectAndPrint, buildReceiptText, buildRawBase64 } from "../../lib/rawPrint";
 // Printer lib loaded lazily inside print functions to avoid startup crash
 const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 import * as Print from "expo-print";
@@ -599,7 +599,7 @@ export default function POSScreen() {
         printedAt: rd.printedAt,
         paymentMethod: rd.paymentMethod,
         isCredit: rd.isCredit,
-        customerName: rd.customerName,
+        customerName: rd.customerName ?? undefined,
         customerPhone: (rd as any).customerPhone,
         creditDate: (rd as any).creditDate,
         items: rd.items,
@@ -628,7 +628,7 @@ export default function POSScreen() {
           return;
         }
         try {
-          await NetPrinter.printBill(text, { cut: true, tailingLine: true });
+          await NetPrinter.printRaw(buildRawBase64(text));
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
           return;
@@ -1498,7 +1498,7 @@ export default function POSScreen() {
                         return;
                       }
                       try {
-                        await Net2.printBill(text, { cut: true, tailingLine: true });
+                        await Net2.printRaw(buildRawBase64(text));
                       } catch (printErr: any) {
                         Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
                         return;

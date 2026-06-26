@@ -1470,12 +1470,5 @@ The image should be square, 256x256 pixels.`;
     return c.json({ updated, skipped, results }, 200);
   })
 
-// Log activity helper — called from auth routes
-async function logActivity(userId: number, shopId: number, action: string, details?: string, ip?: string) {
-  try {
-    await db.insert(schema.activityLog).values({ userId, shopId, action, details: details ?? null, ip: ip ?? null } as any);
-  } catch (_) {}
-}
-
 export type AppType = typeof app;
 export default app;

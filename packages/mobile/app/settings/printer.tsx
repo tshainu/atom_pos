@@ -79,7 +79,7 @@ export default function PrinterSettingsScreen() {
     const cached = await cachedFetchAsync(`settings/${u.shopId}`);
     if (cached && !cached.error) { applySettings(cached); setLoading(false); }
     // Refresh in background
-    apiFetch(`settings/${u.shopId}`).then((data) => { applySettings(data); setLoading(false); });
+    apiFetch(`settings/${u.shopId}`).then((data: any) => { applySettings(data); setLoading(false); });
   };
 
   useFocusEffect(useCallback(() => { load(); }, []));

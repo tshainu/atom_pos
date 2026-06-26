@@ -643,7 +643,7 @@ function QuoteSection() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof form) => {
-      const res = await api.quotes.$post({ json: data });
+      const res = await (api as any).quotes.$post({ json: data });
       return res.json();
     },
     onSuccess: () => setSubmitted(true),

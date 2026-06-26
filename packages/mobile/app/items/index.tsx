@@ -46,7 +46,7 @@ export default function ItemsScreen() {
     if (!u) { setLoading(false); return; }
     const cached = await cachedFetchAsync(`items?shopId=${u.shopId}`);
     if (cached && !cached.error) { setItems(cached.items ?? []); setLoading(false); }
-    apiFetch(`items?shopId=${u.shopId}`).then((data) => {
+    apiFetch(`items?shopId=${u.shopId}`).then((data: any) => {
       if (!data.error) setItems(data.items ?? []);
       setLoading(false);
     });

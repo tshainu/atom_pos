@@ -28,7 +28,7 @@ export default function EditStaffScreen() {
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
-    apiFetch(`users/${id}`).then((d) => {
+    apiFetch(`users/${id}`).then((d: any) => {
       if (!d.error) {
         const u = d.user;
         setForm({

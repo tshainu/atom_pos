@@ -38,7 +38,7 @@ export default function Dashboard() {
   );
   if (!data) return <div style={{ color: "#ff8080" }}>Failed to load dashboard</div>;
 
-  const maxRevenue = Math.max(...(data.dailyChart || []).map((d: any) => d.revenue), 1);
+  // maxRevenue reserved for future chart scaling
   const maxShops = Math.max(...(data.monthlyShops || []).map((d: any) => d.count), 1);
 
   return (

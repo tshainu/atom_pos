@@ -30,7 +30,7 @@ export default function WhatsAppSettingsScreen() {
     if (!u) { setLoading(false); return; }
     const cached = await cachedFetchAsync(`settings/${u.shopId}`);
     if (cached) { applyData(cached); setLoading(false); }
-    apiFetch(`settings/${u.shopId}`).then((data) => { applyData(data); setLoading(false); });
+    apiFetch(`settings/${u.shopId}`).then((data: any) => { applyData(data); setLoading(false); });
   };
 
   useEffect(() => { load(); }, []);
