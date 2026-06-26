@@ -1339,7 +1339,7 @@ export default function POSScreen() {
       <Modal visible={receiptModal} animationType="fade" transparent>
         <View style={styles.receiptOverlay}>
           <View style={styles.receiptCard}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ width: "100%" }}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ width: "100%" }} contentContainerStyle={{ alignItems: "stretch" }}>
               {receiptData && (
                 <View style={styles.receiptPaper}>
                   {/* Logo */}
@@ -1881,9 +1881,9 @@ const styles = StyleSheet.create({
     fontFamily: "monospace",
   },
   rcLogo: { width: 72, height: 72, borderRadius: 36, alignSelf: "center", marginBottom: 8 },
-  rcShopName: { fontSize: 22, fontWeight: "bold", color: "#111", textAlign: "center", alignSelf: "stretch", letterSpacing: 0.5, marginBottom: 2, textTransform: "uppercase" },
-  rcShopAddr: { fontSize: 11, color: "#555", textAlign: "center", alignSelf: "stretch", marginBottom: 1 },
-  rcDash: { fontSize: 10, color: "#aaa", textAlign: "center", alignSelf: "stretch", marginVertical: 5, fontFamily: "monospace" },
+  rcShopName: { fontSize: 22, fontWeight: "bold", color: "#111", textAlign: "center", letterSpacing: 0.5, marginBottom: 2, textTransform: "uppercase" },
+  rcShopAddr: { fontSize: 11, color: "#555", textAlign: "center", marginBottom: 1 },
+  rcDash: { fontSize: 10, color: "#aaa", textAlign: "center", marginVertical: 5, fontFamily: "monospace" },
   rcMetaRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   rcMetaLabel: { fontSize: 11, color: "#666", fontWeight: "600" },
   rcMetaVal: { fontSize: 11, color: "#222", fontWeight: "700" },
@@ -1893,7 +1893,7 @@ const styles = StyleSheet.create({
   rcItemDetail: { fontSize: 10, color: "#555", minWidth: 90 },
   rcItemDots: { flex: 1, fontSize: 10, color: "#bbb", overflow: "hidden" },
   rcItemTotal: { fontSize: 11, fontWeight: "700", color: "#111", minWidth: 60, textAlign: "right" },
-  rcHeaderMsg: { fontSize: 11, color: "#444", textAlign: "center", alignSelf: "stretch", marginBottom: 6, fontStyle: "italic" },
+  rcHeaderMsg: { fontSize: 11, color: "#444", textAlign: "center", marginBottom: 6, fontStyle: "italic" },
   rcTableHeader: { flexDirection: "row", backgroundColor: "#111", paddingVertical: 6, paddingHorizontal: 4, marginTop: 8, marginBottom: 0 },
   rcThCell: { fontSize: 11, fontWeight: "700", color: "#fff" },
   rcTdRow: { flexDirection: "row", paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: "#eee" },
@@ -1905,8 +1905,8 @@ const styles = StyleSheet.create({
   rcNetPayRow: { backgroundColor: "#f0faf8", borderRadius: 6, paddingHorizontal: 8, marginVertical: 3, paddingVertical: 4 },
   rcNetPayLabel: { fontSize: 20, fontWeight: "bold", color: colors.primary },
   rcNetPayVal: { fontSize: 20, fontWeight: "bold", color: colors.primary },
-  rcFooter: { fontSize: 12, fontWeight: "700", color: "#333", textAlign: "center", alignSelf: "stretch", marginTop: 4 },
-  rcFooterSub: { fontSize: 10, color: "#aaa", textAlign: "center", alignSelf: "stretch", marginTop: 2 },
+  rcFooter: { fontSize: 12, fontWeight: "700", color: "#333", textAlign: "center", marginTop: 4 },
+  rcFooterSub: { fontSize: 10, color: "#aaa", textAlign: "center", marginTop: 2 },
   rcActions: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "#eee" },
   rcActionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 14 },
   rcActionText: { fontSize: 14, fontWeight: "700", color: "#fff" },
