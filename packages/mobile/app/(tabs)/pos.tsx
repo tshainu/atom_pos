@@ -1352,7 +1352,7 @@ export default function POSScreen() {
                   ) : null}
 
                   {/* Shop Header */}
-                  <View style={{ width: "100%", alignItems: "center" }}>
+                  <View style={{ alignSelf: "stretch", alignItems: "center" }}>
                     <Text style={styles.rcShopName}>{receiptData.shopName}</Text>
                     {receiptData.shopAddress ? (
                       <Text style={styles.rcShopAddr}>{receiptData.shopAddress}</Text>
@@ -1452,7 +1452,7 @@ export default function POSScreen() {
                     </>
                   )}
 
-                  <View style={{ width: "100%", alignItems: "center" }}>
+                  <View style={{ alignSelf: "stretch", alignItems: "center" }}>
                     <Text style={styles.rcDash}>--------------------------------</Text>
                     {printerSettings.receiptFooter ? (
                       <Text style={styles.rcFooter}>{printerSettings.receiptFooter}</Text>
@@ -1879,7 +1879,7 @@ const styles = StyleSheet.create({
     overflow: "hidden", alignSelf: "stretch",
   },
   receiptPaper: {
-    backgroundColor: "#fffef8", padding: 18, width: "100%", alignSelf: "stretch",
+    backgroundColor: "#fffef8", padding: 18, alignSelf: "stretch", flexGrow: 1,
   },
   rcLogo: { width: 72, height: 72, borderRadius: 36, alignSelf: "center", marginBottom: 8 },
   rcShopName: { fontSize: 22, fontWeight: "bold", color: "#111", textAlign: "center", letterSpacing: 0.5, marginBottom: 2, textTransform: "uppercase" },
