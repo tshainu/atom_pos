@@ -111,7 +111,10 @@ export function buildRawBase64(text: string): string {
   bytes.push(...B.LF);
   bytes.push(...B.CUT);
 
-  return btoa(String.fromCharCode(...bytes));
+  // Build string via loop — spread on large arrays crashes the call stack
+  let bStr = "";
+  for (let i = 0; i < bytes.length; i++) bStr += String.fromCharCode(bytes[i]);
+  return btoa(bStr);
 }
 
 /**
