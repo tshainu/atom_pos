@@ -1339,7 +1339,7 @@ export default function POSScreen() {
       <Modal visible={receiptModal} animationType="fade" transparent>
         <View style={styles.receiptOverlay}>
           <View style={styles.receiptCard}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ width: "100%" }}>
               {receiptData && (
                 <View style={styles.receiptPaper}>
                   {/* Logo */}
@@ -1870,7 +1870,7 @@ const styles = StyleSheet.create({
   listEmpty: { textAlign: "center", color: "#aaa", fontSize: 12, paddingVertical: 24 },
 
   // ── Receipt Modal ──
-  receiptOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.65)", justifyContent: "center", alignItems: "center", padding: 16 },
+  receiptOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.65)", justifyContent: "center", alignItems: "center", padding: 16, paddingHorizontal: 20 },
   receiptCard: {
     backgroundColor: "#fff", borderRadius: 16, width: "100%", maxWidth: 340, maxHeight: "90%",
     shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 16, elevation: 10,
