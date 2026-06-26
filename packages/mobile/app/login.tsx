@@ -131,8 +131,8 @@ export default function LoginScreen() {
       }
       await saveSession(data.token, data.user);
       router.replace("/(tabs)");
-    } catch (e) {
-      Alert.alert("Error", "Network error. Please try again.");
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || String(e) || "Network error. Please try again.");
     } finally {
       setLoading(false);
     }
