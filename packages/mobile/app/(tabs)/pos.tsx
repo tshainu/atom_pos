@@ -112,6 +112,7 @@ export default function POSScreen() {
     whatsappPhone?: string;
     printedAt: string;
     logoUrl?: string;
+    receiptHeader?: string;
   } | null>(null);
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [printerSettings, setPrinterSettings] = useState<{
@@ -426,6 +427,7 @@ export default function POSScreen() {
       whatsappPhone,
       printedAt,
       logoUrl: printerSettings.logoUrl ?? "",
+      receiptHeader: printerSettings.receiptHeader ?? "",
     };
     setReceiptData(optimisticReceipt);
     setPrintModal(false);
@@ -1359,6 +1361,11 @@ export default function POSScreen() {
                   ) : null}
                   <Text style={styles.rcDash}>--------------------------------</Text>
 
+                  {/* Receipt header message */}
+                  {receiptData.receiptHeader ? (
+                    <Text style={styles.rcHeaderMsg}>{receiptData.receiptHeader}</Text>
+                  ) : null}
+
                   {/* Invoice No + Date rows */}
                   <View style={styles.rcMetaRow}>
                     <Text style={styles.rcMetaLabel}>Invoice No</Text>
@@ -1368,24 +1375,24 @@ export default function POSScreen() {
                     <Text style={styles.rcMetaLabel}>Date</Text>
                     <Text style={styles.rcMetaVal}>{receiptData.printedAt}</Text>
                   </View>
-                  <Text style={styles.rcDash}>--------------------------------</Text>
 
-                  {/* Items — thermal style: #N. Name / qty x price ..... total */}
-                  {receiptData.items.map((item, idx) => {
-                    const totalStr = `Rs.${item.total.toFixed(2)}`;
-                    return (
-                      <View key={idx} style={styles.rcItemBlock}>
-                        <Text style={styles.rcItemName}>#{idx + 1}. {item.itemName}</Text>
-                        <View style={styles.rcItemDetailRow}>
-                          <Text style={styles.rcItemDetail}>
-                            {item.qty.toFixed ? item.qty.toFixed(2) : item.qty} x Rs.{item.pricePerItem.toFixed(2)}
-                          </Text>
-                          <Text style={styles.rcItemDots} numberOfLines={1}>{".".repeat(20)}</Text>
-                          <Text style={styles.rcItemTotal}>{totalStr}</Text>
-                        </View>
-                      </View>
-                    );
-                  })}
+                  {/* Items table */}
+                  <View style={styles.rcTableHeader}>
+                    <Text style={[styles.rcThCell, { flex: 0.5 }]}>NO</Text>
+                    <Text style={[styles.rcThCell, { flex: 2.2 }]}>Item</Text>
+                    <Text style={[styles.rcThCell, { flex: 0.6, textAlign: "center" }]}>Qty</Text>
+                    <Text style={[styles.rcThCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
+                  </View>
+                  {receiptData.items.map((item, idx) => (
+                    <View key={idx} style={[styles.rcTdRow, idx % 2 === 1 && styles.rcTdRowAlt]}>
+                      <Text style={[styles.rcTdCell, { flex: 0.5 }]}>{idx + 1}</Text>
+                      <Text style={[styles.rcTdCell, { flex: 2.2 }]} numberOfLines={2}>{item.itemName}</Text>
+                      <Text style={[styles.rcTdCell, { flex: 0.6, textAlign: "center" }]}>{item.qty}</Text>
+                      <Text style={[styles.rcTdCell, { flex: 1, textAlign: "right", fontWeight: "700" }]}>
+                        Rs.{item.total.toLocaleString()}
+                      </Text>
+                    </View>
+                  ))}
 
                   <Text style={styles.rcDash}>--------------------------------</Text>
 
@@ -1886,6 +1893,12 @@ const styles = StyleSheet.create({
   rcItemDetail: { fontSize: 10, color: "#555", minWidth: 90 },
   rcItemDots: { flex: 1, fontSize: 10, color: "#bbb", overflow: "hidden" },
   rcItemTotal: { fontSize: 11, fontWeight: "700", color: "#111", minWidth: 60, textAlign: "right" },
+  rcHeaderMsg: { fontSize: 11, color: "#444", textAlign: "center", marginBottom: 6, fontStyle: "italic" },
+  rcTableHeader: { flexDirection: "row", backgroundColor: "#111", paddingVertical: 6, paddingHorizontal: 4, marginTop: 8, marginBottom: 0 },
+  rcThCell: { fontSize: 11, fontWeight: "700", color: "#fff" },
+  rcTdRow: { flexDirection: "row", paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  rcTdRowAlt: { backgroundColor: "#f9f9f9" },
+  rcTdCell: { fontSize: 11, color: "#222" },
   rcTotalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   rcTotalLabel: { fontSize: 11, color: "#555", flex: 1 },
   rcTotalVal: { fontSize: 11, color: "#222", fontWeight: "600" },
