@@ -198,6 +198,13 @@ export function buildReceiptText(rd: ReceiptData): string {
   const bold  = (s: string)  => `<B>${s}</B>`;
   const big   = (s: string)  => `<CD>${s}</CD>`;
 
+  // Manual center padding — works even if printer ignores ESC/POS alignment
+  const manualCenter = (s: string) => {
+    const trimmed = s.slice(0, colWidth);
+    const pad = Math.max(0, Math.floor((colWidth - trimmed.length) / 2));
+    return " ".repeat(pad) + trimmed;
+  };
+
   const lr = (label: string, value: string) => {
     const space = Math.max(1, colWidth - label.length - value.length);
     return label + " ".repeat(space) + value;
@@ -223,12 +230,12 @@ export function buildReceiptText(rd: ReceiptData): string {
 
   let t = "";
 
-  // ── Header (right-aligned) ──
-  t += rgtB(rd.shopName) + "\n";
-  if (rd.shopAddress) t += rgt(rd.shopAddress) + "\n";
-  if (rd.shopPhone)   t += rgt(rd.shopPhone) + "\n";
+  // ── Header (manually centered — works on all printers) ──
+  t += bold(manualCenter(rd.shopName)) + "\n";
+  if (rd.shopAddress) t += manualCenter(rd.shopAddress) + "\n";
+  if (rd.shopPhone)   t += manualCenter(rd.shopPhone) + "\n";
   t += sep("-") + "\n";
-  if (rd.receiptHeader) t += rgt(rd.receiptHeader) + "\n";
+  if (rd.receiptHeader) t += manualCenter(rd.receiptHeader) + "\n";
 
   // ── Invoice info ──
   t += lr("Invoice No.", billNo) + "\n";
