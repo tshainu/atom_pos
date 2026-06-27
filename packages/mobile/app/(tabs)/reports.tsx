@@ -229,10 +229,12 @@ function PartialSalesReport({ user, range, customFrom, customTo, onData }: any) 
     const { from, to } = rangeToDates(range, customFrom, customTo);
     let url = `reports/partial-sales?shopId=${user.shopId}`;
     if (from && to) url += `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-    cachedFetchAsync(url).then((d: any) => {
-      if (d && !d?.error) { setData(d); onData?.(d); }
-      setLoading(false);
-    });
+    cachedFetchAsync(url)
+      .then((d: any) => {
+        if (d && !d?.error) { setData(d); onData?.(d); }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, [range, customFrom, customTo]);
 
   if (loading) return <ActivityIndicator style={{ padding: 30 }} color={colors.primary} />;
@@ -541,10 +543,13 @@ function StaffSalesReport({ user, range, customFrom, customTo, onData }: any) {
 
   useEffect(() => {
     setLoading(true);
+    setData(null);
     const { from, to } = rangeToDates(range, customFrom, customTo);
     let url = `reports/staff-sales?shopId=${user.shopId}`;
-    if (from && to) url += `&from=${from}&to=${to}`;
-    cachedFetchAsync(url).then((d: any) => { if (d && !d?.error) { setData(d); onData?.(d); } setLoading(false); });
+    if (from && to) url += `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    cachedFetchAsync(url)
+      .then((d: any) => { if (d && !d?.error) { setData(d); onData?.(d); } setLoading(false); })
+      .catch(() => setLoading(false));
   }, [range, customFrom, customTo]);
 
   if (loading) return <ActivityIndicator style={{ padding: 30 }} color={colors.primary} />;

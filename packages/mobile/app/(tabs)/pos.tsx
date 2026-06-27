@@ -1519,6 +1519,23 @@ export default function POSScreen() {
                           Rs. {Math.abs(receiptData.balance).toFixed(2)}
                         </Text>
                       </View>
+                      {receiptData.paymentMethod === "part" && receiptData.customerName ? (
+                        <View style={[styles.rcTotalRow, { backgroundColor: "#FFF7ED", borderRadius: 6, paddingHorizontal: 8, marginVertical: 2 }]}>
+                          <Text style={[styles.rcTotalLabel, { color: "#D97706", fontWeight: "700" }]}>⚠ PARTIAL PAYMENT</Text>
+                        </View>
+                      ) : null}
+                      {receiptData.paymentMethod === "part" && receiptData.customerName ? (
+                        <View style={styles.rcTotalRow}>
+                          <Text style={styles.rcTotalLabel}>Customer</Text>
+                          <Text style={[styles.rcTotalVal, { fontWeight: "700" }]}>{receiptData.customerName}</Text>
+                        </View>
+                      ) : null}
+                      {receiptData.paymentMethod === "part" && receiptData.customerPhone ? (
+                        <View style={styles.rcTotalRow}>
+                          <Text style={styles.rcTotalLabel}>Phone</Text>
+                          <Text style={styles.rcTotalVal}>{receiptData.customerPhone}</Text>
+                        </View>
+                      ) : null}
                     </>
                   ) : (
                     <>
