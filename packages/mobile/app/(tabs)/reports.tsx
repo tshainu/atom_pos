@@ -144,8 +144,15 @@ function SalesReport({ user, range, customFrom, customTo, onData }: any) {
   if (!data) return <Text style={styles.emptyText}>No data</Text>;
 
   const rows: any[] = data.rows ?? [];
-  const cashTotal = rows.filter((r) => r.paymentMethod !== "credit").reduce((s, r) => s + (r.netPay ?? 0), 0);
+  const cashTotal = rows.filter((r) => r.paymentMethod === "cash" || r.paymentMethod === "card").reduce((s, r) => s + (r.netPay ?? 0), 0);
+  const partTotal = rows.filter((r) => r.paymentMethod === "part").reduce((s, r) => s + (r.cashPaid ?? r.cash_paid ?? r.netPay ?? 0), 0);
   const creditTotal = rows.filter((r) => r.paymentMethod === "credit").reduce((s, r) => s + (r.netPay ?? 0), 0);
+
+  const getBadgeStyle = (pm: string) => {
+    if (pm === "credit") return { bg: "#fff7ed", color: "#EA580C" };
+    if (pm === "part") return { bg: "#fef3c7", color: "#D97706" };
+    return { bg: "#dcfce7", color: "#16a34a" };
+  };
 
   return (
     <View>
@@ -165,6 +172,10 @@ function SalesReport({ user, range, customFrom, customTo, onData }: any) {
           <Text style={styles.miniCardVal}>Rs.{cashTotal.toLocaleString()}</Text>
           <Text style={styles.miniCardLabel}>Cash</Text>
         </View>
+        <View style={[styles.miniCard, { backgroundColor: "#D97706" }]}>
+          <Text style={styles.miniCardVal}>Rs.{partTotal.toLocaleString()}</Text>
+          <Text style={styles.miniCardLabel}>Part</Text>
+        </View>
         <View style={[styles.miniCard, { backgroundColor: "#EA580C" }]}>
           <Text style={styles.miniCardVal}>Rs.{creditTotal.toLocaleString()}</Text>
           <Text style={styles.miniCardLabel}>Credit</Text>
@@ -180,22 +191,24 @@ function SalesReport({ user, range, customFrom, customTo, onData }: any) {
             <Text style={[styles.thCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
             <Text style={[styles.thCell, { flex: 0.8, textAlign: "center" }]}>Type</Text>
           </View>
-          {rows.map((s: any, i: number) => (
-            <View key={s.id ?? i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
-              <Text style={[styles.tdCell, { flex: 1.2 }]}>{formatDate(s.createdAt ?? s.created_at)}</Text>
-              <Text style={[styles.tdCell, { flex: 1 }]}>{(s.billNumber ?? s.bill_number ?? "").replace("BILL-", "")}</Text>
-              <Text style={[styles.tdCell, { flex: 1, textAlign: "right", fontWeight: "700", color: colors.primary }]}>
-                Rs.{(s.netPay ?? s.net_pay ?? 0).toLocaleString()}
-              </Text>
-              <View style={[styles.listActionCell, { flex: 0.8 }]}>
-                <View style={[styles.badge, { backgroundColor: s.paymentMethod !== "credit" ? "#dcfce7" : "#fff7ed" }]}>
-                  <Text style={[styles.badgeText, { color: s.paymentMethod !== "credit" ? "#16a34a" : "#EA580C" }]}>
-                    {s.paymentMethod ?? "cash"}
-                  </Text>
+          {rows.map((s: any, i: number) => {
+            const pm = s.paymentMethod ?? "cash";
+            const badge = getBadgeStyle(pm);
+            return (
+              <View key={s.id ?? i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
+                <Text style={[styles.tdCell, { flex: 1.2 }]}>{formatDate(s.createdAt ?? s.created_at)}</Text>
+                <Text style={[styles.tdCell, { flex: 1 }]}>{(s.billNumber ?? s.bill_number ?? "").replace("BILL-", "")}</Text>
+                <Text style={[styles.tdCell, { flex: 1, textAlign: "right", fontWeight: "700", color: colors.primary }]}>
+                  Rs.{(s.netPay ?? s.net_pay ?? 0).toLocaleString()}
+                </Text>
+                <View style={[styles.listActionCell, { flex: 0.8 }]}>
+                  <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+                    <Text style={[styles.badgeText, { color: badge.color }]}>{pm}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
       {rows.length === 0 && <Text style={styles.emptyText}>No sales in this period</Text>}
@@ -494,10 +507,12 @@ function buildReportText(tab: ReportTab, data: any, range: string, shopName: str
   if (tab === "sales") {
     const rows: any[] = data?.rows ?? [];
     const total = data?.total ?? 0;
-    const cash = rows.filter(r => r.paymentMethod !== "credit").reduce((s: number, r: any) => s + (r.netPay ?? 0), 0);
+    const cash = rows.filter(r => r.paymentMethod === "cash" || r.paymentMethod === "card").reduce((s: number, r: any) => s + (r.netPay ?? 0), 0);
+    const part = rows.filter(r => r.paymentMethod === "part").reduce((s: number, r: any) => s + (r.cashPaid ?? r.cash_paid ?? r.netPay ?? 0), 0);
     const credit = rows.filter(r => r.paymentMethod === "credit").reduce((s: number, r: any) => s + (r.netPay ?? 0), 0);
     t += BOLD_ON + "Total Sales:".padEnd(pad) + `Rs.${total.toLocaleString()}` + BOLD_OFF + "\n";
     t += "Cash:".padEnd(pad) + `Rs.${cash.toLocaleString()}\n`;
+    t += "Part:".padEnd(pad) + `Rs.${part.toLocaleString()}\n`;
     t += "Credit:".padEnd(pad) + `Rs.${credit.toLocaleString()}\n`;
     t += "Bills:".padEnd(pad) + `${rows.length}\n`;
     if (rows.length > 0) {
@@ -648,12 +663,14 @@ function buildPdfHtml(tab: ReportTab, data: any, range: string, shopName: string
   if (tab === "sales") {
     const rows: any[] = data?.rows ?? [];
     const total = data?.total ?? 0;
-    const cash = rows.filter(r => r.paymentMethod !== "credit").reduce((s, r) => s + (r.netPay ?? 0), 0);
+    const cash = rows.filter(r => r.paymentMethod === "cash" || r.paymentMethod === "card").reduce((s, r) => s + (r.netPay ?? 0), 0);
+    const part = rows.filter(r => r.paymentMethod === "part").reduce((s, r) => s + (r.cashPaid ?? r.cash_paid ?? r.netPay ?? 0), 0);
     const credit = rows.filter(r => r.paymentMethod === "credit").reduce((s, r) => s + (r.netPay ?? 0), 0);
     body += `<div class="summary">
       <div class="card"><div class="cv">Rs.${total.toLocaleString()}</div><div class="cl">Total Sales</div></div>
       <div class="card teal"><div class="cv">${rows.length}</div><div class="cl">Bills</div></div>
       <div class="card green"><div class="cv">Rs.${cash.toLocaleString()}</div><div class="cl">Cash</div></div>
+      <div class="card" style="background:#D97706"><div class="cv">Rs.${part.toLocaleString()}</div><div class="cl">Part</div></div>
       <div class="card orange"><div class="cv">Rs.${credit.toLocaleString()}</div><div class="cl">Credit</div></div>
     </div>`;
     body += `<table><tr><th>Date</th><th>Bill No.</th><th class="right">Amount</th><th class="center">Type</th></tr>`;

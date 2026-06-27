@@ -19,8 +19,11 @@ const B = {
   RIGHT:       [0x1b, 0x61, 0x02],        // ESC a 2 — right align
   BOLD_ON:     [0x1b, 0x45, 0x01],        // ESC E 1 — bold on
   BOLD_OFF:    [0x1b, 0x45, 0x00],        // ESC E 0 — bold off
-  DOUBLE_ON:   [0x1d, 0x21, 0x01],        // GS ! 0x01 — double height only (no width — 58mm wraps with double-width)
-  DOUBLE_OFF:  [0x1d, 0x21, 0x00],        // GS ! 0 — normal size
+  DOUBLE_WIDTH_ON: [0x1d, 0x21, 0x10],    // GS ! 0x10 — double width only (no height change)
+  DOUBLE_ON:   [0x1d, 0x21, 0x01],        // GS ! 0x01 — double height only
+  TRIPLE_ON:   [0x1d, 0x21, 0x22],        // GS ! 0x22 — 2x height, 2x width (triple effect)
+  QUAD_ON:     [0x1d, 0x21, 0x33],        // GS ! 0x33 — 3x height, 3x width (quad effect)
+  SIZE_OFF:    [0x1d, 0x21, 0x00],        // GS ! 0 — normal size
   RESET:       [0x1b, 0x61, 0x00, 0x1d, 0x21, 0x00, 0x1b, 0x45, 0x00], // left+normal+nobold
   LF:          [0x0a],                    // line feed
   FEED:        [0x0a],
@@ -57,11 +60,20 @@ export function buildRawBase64(text: string): string {
     let line = lines[li];
     let isBold = false;
     let isDouble = false;
+    let isTriple = false;
+    let isQuad = false;
+    let isDoubleWidth = false;
     let isCenter = false;
     let isRight = false;
 
-    // Combined tags first
-    if (line.includes("<CD>") && line.includes("</CD>")) {
+    // Combined tags first (size variants)
+    if (line.includes("<Q>") && line.includes("</Q>")) {
+      isQuad = true; isBold = true;
+      line = line.replace(/<\/?Q>/g, "");
+    } else if (line.includes("<T>") && line.includes("</T>")) {
+      isTriple = true; isBold = true;
+      line = line.replace(/<\/?T>/g, "");
+    } else if (line.includes("<CD>") && line.includes("</CD>")) {
       isCenter = true; isDouble = true; isBold = true;
       line = line.replace(/<\/?CD>/g, "");
     } else if (line.includes("<CB>") && line.includes("</CB>")) {
@@ -88,6 +100,10 @@ export function buildRawBase64(text: string): string {
         isRight = true;
         line = line.replace(/<\/?R>/g, "");
       }
+      if (line.includes("<W>") && line.includes("</W>")) {
+        isDoubleWidth = true;
+        line = line.replace(/<\/?W>/g, "");
+      }
       if (line.includes("<L>") && line.includes("</L>")) {
         line = line.replace(/<\/?L>/g, "");
       }
@@ -98,8 +114,11 @@ export function buildRawBase64(text: string): string {
     else if (isRight) bytes.push(...B.RIGHT);
     else bytes.push(...B.LEFT);
 
-    // Apply size/bold
-    if (isDouble) bytes.push(...B.DOUBLE_ON);
+    // Apply size/bold (quad > triple > double > double-width > bold)
+    if (isQuad) bytes.push(...B.QUAD_ON);
+    else if (isTriple) bytes.push(...B.TRIPLE_ON);
+    else if (isDouble) bytes.push(...B.DOUBLE_ON);
+    else if (isDoubleWidth) bytes.push(...B.DOUBLE_WIDTH_ON);
     else if (isBold) bytes.push(...B.BOLD_ON);
 
     // Write text content
@@ -124,7 +143,7 @@ export function buildRawBase64(text: string): string {
  * Full connect → print → disconnect with retry.
  * All BLE print sites should use this.
  */
-export async function bleConnectAndPrint(BLEPrinter: any, address: string, text: string): Promise<void> {
+export async function bleConnectAndPrint(BLEPrinter: any, address: string, text: string, logoUrl?: string): Promise<void> {
   try { await BLEPrinter.init(); } catch (_) {}
 
   let connected = false;
@@ -144,6 +163,10 @@ export async function bleConnectAndPrint(BLEPrinter: any, address: string, text:
   if (!connected) throw new Error("Could not connect to printer.");
 
   try {
+    if (logoUrl) {
+      const base64 = logoUrl.includes(",") ? logoUrl.split(",")[1] : logoUrl;
+      try { await BLEPrinter.printImageBase64(base64, { imageWidth: 200, paddingX: 0 }); } catch (_) {}
+    }
     await BLEPrinter.printRaw(buildRawBase64(text));
   } catch (e: any) {
     throw new Error(e?.message || "Connected but could not print.");
@@ -193,10 +216,7 @@ export function buildReceiptText(rd: ReceiptData): string {
   const sep   = (ch: string) => ch.repeat(colWidth);
   const ctrB  = (s: string)  => `<CB>${s}</CB>`;
   const ctr   = (s: string)  => `<C>${s}</C>`;
-  const rgtB  = (s: string)  => `<RB>${s}</RB>`;
-  const rgt   = (s: string)  => `<R>${s}</R>`;
   const bold  = (s: string)  => `<B>${s}</B>`;
-  const big   = (s: string)  => `<CD>${s}</CD>`;
 
   // Manual center padding — works even if printer ignores ESC/POS alignment
   const manualCenter = (s: string) => {
@@ -230,8 +250,15 @@ export function buildReceiptText(rd: ReceiptData): string {
 
   let t = "";
 
-  // ── Header (manually centered — works on all printers) ──
-  t += bold(manualCenter(rd.shopName)) + "\n";
+  // ── Header (manual center padding — works on all printers) ──
+  // Shop name: double-width chars each occupy 2 columns, so center in colWidth/2 effective space
+  const dblWidthCenter = (s: string) => {
+    const halfCol = Math.floor(colWidth / 2);
+    const trimmed = s.slice(0, halfCol);
+    const pad = Math.max(0, Math.floor((halfCol - trimmed.length) / 2));
+    return " ".repeat(pad) + trimmed;
+  };
+  t += `<W>${dblWidthCenter(rd.shopName)}</W>` + "\n";
   if (rd.shopAddress) t += manualCenter(rd.shopAddress) + "\n";
   if (rd.shopPhone)   t += manualCenter(rd.shopPhone) + "\n";
   t += sep("-") + "\n";
@@ -242,7 +269,7 @@ export function buildReceiptText(rd: ReceiptData): string {
   t += lr("Date", rd.printedAt) + "\n";
   if (rd.isCredit && rd.customerName) {
     t += bold("Customer") + "\n";
-    t += rd.customerName + "\n";
+    t += manualCenter(rd.customerName) + "\n";
     if (rd.customerPhone) t += `Mobile: ${rd.customerPhone}\n`;
   }
   t += sep(".") + "\n";
@@ -258,7 +285,13 @@ export function buildReceiptText(rd: ReceiptData): string {
   if (rd.discount > 0) {
     t += lr("Discount:", `-Rs ${rd.discount.toLocaleString()}.00`) + "\n";
   }
-  t += lrBold("Total:", `Rs ${rd.netPay.toLocaleString()}.00`) + "\n";
+  // Total line — double-width so it stands out on printer
+  // At double-width, effective columns = colWidth/2, so build a compact lr
+  const halfCol = Math.floor(colWidth / 2);
+  const totalLabel = "Total:";
+  const totalValue = `Rs${rd.netPay.toLocaleString()}`;
+  const totalSpace = Math.max(1, halfCol - totalLabel.length - totalValue.length);
+  t += `<W>${totalLabel}${" ".repeat(totalSpace)}${totalValue}</W>` + "\n";
 
   if (!rd.isCredit) {
     t += lr(`${pmLabel} (${rd.printedAt.split(" ")[0]})`, `Rs ${rd.cashPaid.toLocaleString()}.00`) + "\n";
@@ -279,8 +312,9 @@ export function buildReceiptText(rd: ReceiptData): string {
 
   // ── Footer ──
   t += sep("-") + "\n";
-  if (rd.receiptFooter) t += ctr(rd.receiptFooter) + "\n";
-  t += ctr("Thank you for your Trust!") + "\n";
+  if (rd.receiptFooter) t += manualCenter(rd.receiptFooter) + "\n";
+  t += manualCenter("Thank you for your Trust!") + "\n";
+  t += manualCenter("ATOM POS | Powered by AxisXNOR") + "\n";
 
   return t;
 }

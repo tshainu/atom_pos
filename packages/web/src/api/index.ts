@@ -219,6 +219,7 @@ const app = new Hono()
       salaryPeriod: body.salaryPeriod,
       commission: body.commission,
       photoUrl: body.photoUrl,
+      ...(body.suspended !== undefined ? { suspended: body.suspended } : {}),
     };
     if (body.password) updates.passwordHash = hashPassword(body.password);
     const [user] = await db
@@ -463,6 +464,7 @@ The image should be square, 256x256 pixels.`;
         customerPhone: body.customerPhone ?? null,
         promisedDate: body.promisedDate ?? null,
         heldLabel: body.heldLabel ?? null,
+        cashPaid: body.cashPaid ?? body.netPay ?? 0,
       })
       .returning();
 
@@ -778,20 +780,13 @@ The image should be square, 256x256 pixels.`;
     return c.json({ rows, total }, 200);
   })
 
-  // ── Report: Item Sales Report (Bill no | item | amount) ────────────────────
+  // ── Report: Item Sales Report (Bill no | item | qty | amount) ──────────────
   .get("/reports/item-sales", async (c) => {
     const shopId = Number(c.req.query("shopId"));
     const { from, to } = c.req.query() as { from?: string; to?: string };
     if (!shopId) return c.json({ error: "shopId required" }, 400);
-    const saleConditions: any[] = [eq(schema.sales.shopId, shopId), eq(schema.sales.status, "completed")];
-    if (from) saleConditions.push(sql`s.created_at >= ${Math.floor(new Date(from).getTime()/1000)}`);
-    if (to) saleConditions.push(sql`s.created_at <= ${Math.floor(new Date(to).getTime()/1000)}`);
-
-    const fromTs = from ? Math.floor(new Date(from).getTime()/1000) : null;
-    const toTs = to ? Math.floor(new Date(to).getTime()/1000) : null;
-    const conditions: any[] = [eq(schema.sales.shopId, shopId), eq(schema.sales.status, "completed")];
-    if (fromTs) conditions.push(sql`s.created_at >= ${fromTs}`);
-    if (toTs) conditions.push(sql`s.created_at <= ${toTs}`);
+    const fromTs = from ? Math.floor(new Date(from).getTime() / 1000) : null;
+    const toTs = to ? Math.floor(new Date(to).getTime() / 1000) : null;
     const rows = await db
       .select({
         bill_number: schema.sales.billNumber,
@@ -806,8 +801,8 @@ The image should be square, 256x256 pixels.`;
       .where(and(
         eq(schema.sales.shopId, shopId),
         eq(schema.sales.status, "completed"),
-        ...(fromTs ? [sql`${schema.sales.createdAt} >= ${new Date(fromTs * 1000)}`] : []),
-        ...(toTs ? [sql`${schema.sales.createdAt} <= ${new Date(toTs * 1000)}`] : []),
+        ...(fromTs ? [sql`${schema.sales.createdAt} >= ${fromTs}`] : []),
+        ...(toTs ? [sql`${schema.sales.createdAt} <= ${toTs}`] : []),
       ))
       .orderBy(desc(schema.sales.createdAt));
     const total = rows.reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);

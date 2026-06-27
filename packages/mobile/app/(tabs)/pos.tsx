@@ -91,6 +91,12 @@ export default function POSScreen() {
   const [dpDay, setDpDay] = useState(new Date().getDate());
   const [submitting, setSubmitting] = useState(false);
 
+  // Partial payment → due customer modal
+  const [dueModal, setDueModal] = useState(false);
+  const [dueName, setDueName] = useState("");
+  const [duePhone, setDuePhone] = useState("");
+  const [pendingReceiptData, setPendingReceiptData] = useState<any>(null);
+
   // Receipt modal
   const [receiptModal, setReceiptModal] = useState(false);
   const [receiptData, setReceiptData] = useState<{
@@ -429,31 +435,81 @@ export default function POSScreen() {
       logoUrl: printerSettings.logoUrl ?? "",
       receiptHeader: printerSettings.receiptHeader ?? "",
     };
-    setReceiptData(optimisticReceipt);
-    setPrintModal(false);
-    setReceiptModal(true);
-    setBill([]); setDiscount(0);
-    setPrintCashInput(""); setShowCreditForm(false);
-    setCreditName(""); setCreditPhone(""); setCreditDate("");
 
-    // Save in background
+    // If partial payment (cash paid < net pay, not a credit sale) → ask for due customer info
+    const isPartialPayment = !isCreditSale && cashPaid > 0 && cashPaid < snapshotNetPay;
+    if (isPartialPayment) {
+      setPendingReceiptData(optimisticReceipt);
+      setDueName("");
+      setDuePhone("");
+      setPrintModal(false);
+      setBill([]); setDiscount(0);
+      setPrintCashInput(""); setShowCreditForm(false);
+      setCreditName(""); setCreditPhone(""); setCreditDate("");
+      setDueModal(true);
+    } else {
+      setReceiptData(optimisticReceipt);
+      setPrintModal(false);
+      setReceiptModal(true);
+      setBill([]); setDiscount(0);
+      setPrintCashInput(""); setShowCreditForm(false);
+      setCreditName(""); setCreditPhone(""); setCreditDate("");
+    }
+
+    // For partial payment, save is handled after due modal is dismissed/confirmed
+    if (!isPartialPayment) {
+      try {
+        const data = await apiFetch("sales", {
+          method: "POST",
+          body: JSON.stringify({
+            shopId: user.shopId, userId: user.id, soldBy: selectedSoldBy ?? user.id,
+            billType: "normal",
+            subtotal: snapshotSubtotal, discount: snapshotDiscount, netPay: snapshotNetPay,
+            paymentMethod: isCreditSale ? "credit" : snapshotPayMethod,
+            status: "completed",
+            customerName: isCreditSale ? snapshotCreditName : null,
+            customerPhone: isCreditSale ? snapshotCreditPhone : null,
+            promisedDate: isCreditSale ? snapshotCreditDate : null,
+            items: snapshotBill,
+          }),
+        });
+        if (!data.error) {
+          setReceiptData((prev) => prev ? { ...prev, billNumber: data.sale.billNumber } : prev);
+          if (user?.shopId) {
+            cacheInvalidate(`reports/summary?shopId=${user.shopId}`);
+            cacheInvalidate(`reports/today?shopId=${user.shopId}`);
+            cacheInvalidate(`reports/sales-chart`);
+            cacheInvalidate(`sales/recent?shopId=${user.shopId}`);
+          }
+        } else {
+          Alert.alert("Save Error", data.error);
+        }
+      } catch { Alert.alert("Save Error", "Bill shown but failed to save. Please retry."); }
+    }
+  };
+
+  // ── Confirm Due Customer (after partial payment modal) ──
+  const confirmDueCustomer = async (rd: any, customerName?: string, customerPhone?: string) => {
+    const finalRd = { ...rd, customerName: customerName || undefined, customerPhone: customerPhone || undefined };
+    setReceiptData(finalRd);
+    setDueModal(false);
+    setReceiptModal(true);
     try {
       const data = await apiFetch("sales", {
         method: "POST",
         body: JSON.stringify({
           shopId: user.shopId, userId: user.id, soldBy: selectedSoldBy ?? user.id,
           billType: "normal",
-          subtotal: snapshotSubtotal, discount: snapshotDiscount, netPay: snapshotNetPay,
-          paymentMethod: isCreditSale ? "credit" : snapshotPayMethod,
+          subtotal: rd.subtotal, discount: rd.discount, netPay: rd.netPay,
+          paymentMethod: "part",
+          cashPaid: rd.cashPaid,
           status: "completed",
-          customerName: isCreditSale ? snapshotCreditName : null,
-          customerPhone: isCreditSale ? snapshotCreditPhone : null,
-          promisedDate: isCreditSale ? snapshotCreditDate : null,
-          items: snapshotBill,
+          customerName: customerName || null,
+          customerPhone: customerPhone || null,
+          items: rd.items,
         }),
       });
       if (!data.error) {
-        // Patch bill number once API responds
         setReceiptData((prev) => prev ? { ...prev, billNumber: data.sale.billNumber } : prev);
         if (user?.shopId) {
           cacheInvalidate(`reports/summary?shopId=${user.shopId}`);
@@ -616,10 +672,11 @@ export default function POSScreen() {
         balance: rd.balance,
       });
       const { BLEPrinter, NetPrinter } = getPrinter();
+      const logoUrl = ps.logoUrl ?? "";
       if (ps.printerType === "bluetooth") {
         if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings."); return; }
         try {
-          await bleConnectAndPrint(BLEPrinter, ps.printerAddress, text);
+          await bleConnectAndPrint(BLEPrinter, ps.printerAddress, text, logoUrl);
         } catch (e: any) {
           Alert.alert("Print Failed", e?.message || "Could not print.");
           return;
@@ -634,6 +691,10 @@ export default function POSScreen() {
           return;
         }
         try {
+          if (logoUrl) {
+            const base64 = logoUrl.includes(",") ? logoUrl.split(",")[1] : logoUrl;
+            try { await NetPrinter.printImageBase64(base64, { imageWidth: 200, paddingX: 0 }); } catch (_) {}
+          }
           await NetPrinter.printRaw(buildRawBase64(text));
         } catch (printErr: any) {
           Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
@@ -684,7 +745,7 @@ export default function POSScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerShopName}>{SHOP_NAME}</Text>
+          <Text style={styles.headerShopName}>{user?.shopName ?? SHOP_NAME}</Text>
           <View style={styles.searchBox}>
             <Ionicons name="search-outline" size={14} color="#fff" style={{ marginRight: 4 }} />
             <TextInput
@@ -1549,11 +1610,12 @@ export default function POSScreen() {
                     return;
                   }
 
+                  const logoUrl = ps.logoUrl ?? "";
                   try {
                     if (ps.printerType === "bluetooth") {
                       if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings first."); return; }
                       try {
-                        await bleConnectAndPrint(BLE2, ps.printerAddress, text);
+                        await bleConnectAndPrint(BLE2, ps.printerAddress, text, logoUrl);
                       } catch (e: any) {
                         Alert.alert("Print Failed", e?.message || "Could not print.");
                         return;
@@ -1568,6 +1630,10 @@ export default function POSScreen() {
                         return;
                       }
                       try {
+                        if (logoUrl) {
+                          const base64 = logoUrl.includes(",") ? logoUrl.split(",")[1] : logoUrl;
+                          try { await Net2.printImageBase64(base64, { imageWidth: 200, paddingX: 0 }); } catch (_) {}
+                        }
                         await Net2.printRaw(buildRawBase64(text));
                       } catch (printErr: any) {
                         Alert.alert("Print Failed", printErr?.message || "Connected but could not print.");
@@ -1693,6 +1759,59 @@ export default function POSScreen() {
                   setDatePickerVisible(false);
                 }}>
                 <Text style={{ color: "#fff", fontWeight: "700" }}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ══════════════════════════════════════════════
+          MODAL — Due Customer (partial payment)
+      ══════════════════════════════════════════════ */}
+      <Modal visible={dueModal} animationType="fade" transparent>
+        <View style={styles.modalOverlayCentered}>
+          <View style={[styles.centeredModalCard, { maxWidth: 360 }]}>
+            <View style={{ alignItems: "center", marginBottom: 10 }}>
+              <Ionicons name="person-add-outline" size={32} color="#FF9800" />
+              <Text style={[styles.modalTitle, { marginTop: 6, marginBottom: 2 }]}>Amount Short!</Text>
+              <Text style={{ fontSize: 12, color: "#888", textAlign: "center", marginBottom: 10 }}>
+                Paid less than total. Record customer details for the due amount? (Optional)
+              </Text>
+              {pendingReceiptData && (
+                <View style={{ backgroundColor: "#FFF3E0", borderRadius: 8, padding: 10, width: "100%", marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#E65100", textAlign: "center" }}>
+                    Due: Rs.{Math.abs(pendingReceiptData.balance).toLocaleString()}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <TextInput
+              style={styles.creditField}
+              value={dueName}
+              onChangeText={setDueName}
+              placeholder="Customer name (optional)"
+              placeholderTextColor="#aaa"
+            />
+            <TextInput
+              style={styles.creditField}
+              value={duePhone}
+              onChangeText={setDuePhone}
+              placeholder="Phone number (optional)"
+              placeholderTextColor="#aaa"
+              keyboardType="phone-pad"
+            />
+            <View style={styles.modalBtns}>
+              <TouchableOpacity
+                style={[styles.cancelBtn, { backgroundColor: "#9E9E9E" }]}
+                onPress={() => confirmDueCustomer(pendingReceiptData)}
+              >
+                <Text style={styles.cancelBtnText}>Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={() => confirmDueCustomer(pendingReceiptData, dueName.trim() || undefined, duePhone.trim() || undefined)}
+              >
+                <Text style={styles.addBtnText}>Save & Print</Text>
               </TouchableOpacity>
             </View>
           </View>

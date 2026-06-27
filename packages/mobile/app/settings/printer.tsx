@@ -213,17 +213,22 @@ export default function PrinterSettingsScreen() {
       const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
       const SEP = "================================\n";
 
-      // Build raw ESC/POS bytes manually — bypasses library's iconv encoding
-      // which is suspected to corrupt text on MPrinter P10 and similar printers.
-      // We encode as pure Latin-1 (one byte per char), no iconv involved.
+      // Build centered test print using manual space padding
       const lines: string[] = [];
-      lines.push("ATOM POS - PRINTER TEST\n");
+      const colWidth = settings.paperWidth === "58mm" ? 32 : 42;
+      const manualCenter = (s: string) => {
+        const trimmed = s.slice(0, colWidth);
+        const pad = Math.max(0, Math.floor((colWidth - trimmed.length) / 2));
+        return " ".repeat(pad) + trimmed;
+      };
+      
+      lines.push(manualCenter("ATOM POS - PRINTER TEST") + "\n");
       lines.push("================================\n");
-      if (user?.shopName) lines.push(`Shop: ${user.shopName}\n`);
+      if (user?.shopName) lines.push(manualCenter(`Shop: ${user.shopName}`) + "\n");
       lines.push(`Date: ${dateStr}  ${timeStr}\n`);
-      lines.push(`Paper: ${settings.paperWidth}\n`);
-      lines.push(`Type : ${settings.printerType === "bluetooth" ? "Bluetooth" : "Wi-Fi"}\n`);
-      if (settings.printerAddress) lines.push(`MAC  : ${settings.printerAddress}\n`);
+      lines.push(manualCenter(`Paper: ${settings.paperWidth}`) + "\n");
+      lines.push(manualCenter(`Type : ${settings.printerType === "bluetooth" ? "Bluetooth" : "Wi-Fi"}`) + "\n");
+      if (settings.printerAddress) lines.push(manualCenter(`MAC  : ${settings.printerAddress}`) + "\n");
       lines.push("================================\n");
       lines.push("Item A        x2   Rs.300\n");
       lines.push("Item B        x1   Rs.350\n");
@@ -233,9 +238,9 @@ export default function PrinterSettingsScreen() {
       lines.push("Discount          Rs.50\n");
       lines.push("Total            Rs.825\n");
       lines.push("================================\n");
-      lines.push("ATOM POS by AxisXNOR\n");
-      lines.push("Test successful!\n");
-      lines.push("\n\n\n\n");
+      lines.push(manualCenter("ATOM POS by AxisXNOR") + "\n");
+      lines.push(manualCenter("Test successful!") + "\n");
+      lines.push("\n");
 
       const { BLEPrinter, NetPrinter } = getPrinter();
       if (settings.printerType === "bluetooth") {

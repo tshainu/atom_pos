@@ -92,6 +92,8 @@ export const sales = sqliteTable("sales", {
   soldBy: integer("sold_by"),
   // Credit collection tracking
   collectedAmount: real("collected_amount").notNull().default(0),
+  // Partial payment: actual cash received (for "part" payment method)
+  cashPaid: real("cash_paid").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
