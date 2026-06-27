@@ -152,6 +152,15 @@ export async function adminDeleteAnnouncement(id: number) {
   return res.json();
 }
 
+export async function adminChangePassword(newPassword: string) {
+  const res = await fetch(`${BASE}/admin/change-password`, {
+    method: "PUT", headers: adminHeaders(), body: JSON.stringify({ newPassword }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to change password");
+  return data;
+}
+
 export function isAdminLoggedIn() {
   return !!localStorage.getItem("admin_token");
 }

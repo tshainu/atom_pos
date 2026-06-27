@@ -6,6 +6,28 @@ import { eq, and, desc, sql, or, isNull } from "drizzle-orm";
 import crypto from "crypto";
 import { generateText } from "ai";
 import { gateway } from "./lib/gateway";
+import fs from "fs";
+import path from "path";
+
+// Super admin credentials storage
+const ADMIN_CREDS_FILE = path.join(process.cwd(), ".admin_creds.json");
+
+function getAdminCreds(): { username: string; passwordHash: string } {
+  try {
+    if (fs.existsSync(ADMIN_CREDS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(ADMIN_CREDS_FILE, "utf-8"));
+      if (data.username && data.passwordHash) return data;
+    }
+  } catch {}
+  // Fallback to env or defaults
+  const username = process.env.ADMIN_USERNAME || "atomadmin";
+  const password = process.env.ADMIN_PASSWORD || "atom@2024";
+  return { username, passwordHash: hashPassword(password) };
+}
+
+function saveAdminCreds(username: string, password: string) {
+  fs.writeFileSync(ADMIN_CREDS_FILE, JSON.stringify({ username, passwordHash: hashPassword(password) }), "utf-8");
+}
 
 function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password).digest("hex");
@@ -1133,13 +1155,22 @@ The image should be square, 256x256 pixels.`;
   // ── Admin Auth ──────────────────────────────────────────
   .post("/admin/login", async (c) => {
     const { username, password } = await c.req.json();
-    const adminUser = process.env.ADMIN_USERNAME || "atomadmin";
-    const adminPass = process.env.ADMIN_PASSWORD || "atom@2024";
-    if (username !== adminUser || password !== adminPass) {
+    const creds = getAdminCreds();
+    if (username !== creds.username || hashPassword(password) !== creds.passwordHash) {
       return c.json({ error: "Invalid credentials" }, 401);
     }
     const token = "admin_" + crypto.randomBytes(32).toString("hex");
     return c.json({ token }, 200);
+  })
+
+  .put("/admin/change-password", async (c) => {
+    const auth = c.req.header("Authorization")?.replace("Bearer ", "");
+    if (!auth?.startsWith("admin_")) return c.json({ error: "Unauthorized" }, 401);
+    const { newPassword } = await c.req.json();
+    if (!newPassword || newPassword.length < 6) return c.json({ error: "Password must be at least 6 characters" }, 400);
+    const creds = getAdminCreds();
+    saveAdminCreds(creds.username, newPassword);
+    return c.json({ message: "Password updated successfully" }, 200);
   })
 
   // ── Admin Middleware helper ─────────────────────────────

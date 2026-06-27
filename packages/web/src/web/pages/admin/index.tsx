@@ -7,10 +7,11 @@ import Users from "./users";
 import Transactions from "./transactions";
 import ActivityLog from "./activity-log";
 import Announcements from "./announcements";
+import Settings from "./settings";
 
 const TEAL = "#2BBFB3";
 
-type Tab = "dashboard" | "shops" | "users" | "transactions" | "activity-log" | "announcements";
+type Tab = "dashboard" | "shops" | "users" | "transactions" | "activity-log" | "announcements" | "settings";
 
 const NAV: { key: Tab; label: string; icon: string }[] = [
   { key: "dashboard", label: "Dashboard", icon: "📊" },
@@ -19,6 +20,7 @@ const NAV: { key: Tab; label: string; icon: string }[] = [
   { key: "transactions", label: "Transactions", icon: "💳" },
   { key: "activity-log", label: "Activity Log", icon: "🕐" },
   { key: "announcements", label: "Announcements", icon: "📢" },
+  { key: "settings", label: "Settings", icon: "⚙️" },
 ];
 
 export default function AdminPanel() {
@@ -157,6 +159,7 @@ export default function AdminPanel() {
           {tab === "transactions" && <Transactions />}
           {tab === "activity-log" && <ActivityLog />}
           {tab === "announcements" && <Announcements />}
+          {tab === "settings" && <Settings />}
         </div>
       </div>
     </div>
