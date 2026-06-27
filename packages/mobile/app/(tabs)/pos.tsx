@@ -1352,7 +1352,7 @@ export default function POSScreen() {
                   ) : null}
 
                   {/* Shop Header */}
-                  <View style={{ alignSelf: "stretch", alignItems: "center" }}>
+                  <View style={{ alignSelf: "stretch", alignItems: "flex-end" }}>
                     <Text style={styles.rcShopName}>{receiptData.shopName}</Text>
                     {receiptData.shopAddress ? (
                       <Text style={styles.rcShopAddr}>{receiptData.shopAddress}</Text>
@@ -1907,8 +1907,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fffef8", padding: 18, alignSelf: "stretch", flexGrow: 1,
   },
   rcLogo: { width: 72, height: 72, borderRadius: 36, alignSelf: "center", marginBottom: 8 },
-  rcShopName: { fontSize: 22, fontWeight: "bold", color: "#111", textAlign: "center", letterSpacing: 0.5, marginBottom: 2, textTransform: "uppercase" },
-  rcShopAddr: { fontSize: 11, color: "#555", textAlign: "center", marginBottom: 1 },
+  rcShopName: { fontSize: 22, fontWeight: "bold", color: "#111", textAlign: "right", letterSpacing: 0.5, marginBottom: 2, textTransform: "uppercase" },
+  rcShopAddr: { fontSize: 11, color: "#555", textAlign: "right", marginBottom: 1 },
   rcDash: { fontSize: 10, color: "#aaa", textAlign: "center", marginVertical: 5, fontFamily: "monospace" },
   rcMetaRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   rcMetaLabel: { fontSize: 11, color: "#666", fontWeight: "600" },
@@ -1919,7 +1919,7 @@ const styles = StyleSheet.create({
   rcItemDetail: { fontSize: 10, color: "#555", minWidth: 90 },
   rcItemDots: { flex: 1, fontSize: 10, color: "#bbb", overflow: "hidden" },
   rcItemTotal: { fontSize: 11, fontWeight: "700", color: "#111", minWidth: 60, textAlign: "right" },
-  rcHeaderMsg: { fontSize: 11, color: "#444", textAlign: "center", marginBottom: 6, fontStyle: "italic" },
+  rcHeaderMsg: { fontSize: 11, color: "#444", textAlign: "right", marginBottom: 6, fontStyle: "italic" },
   rcTableHeader: { flexDirection: "row", backgroundColor: "#111", paddingVertical: 6, paddingHorizontal: 4, marginTop: 8, marginBottom: 0 },
   rcThCell: { fontSize: 11, fontWeight: "700", color: "#fff" },
   rcTdRow: { flexDirection: "row", paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: "#eee" },
