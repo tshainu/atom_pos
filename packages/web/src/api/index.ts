@@ -1133,8 +1133,8 @@ The image should be square, 256x256 pixels.`;
   // ── Admin Auth ──────────────────────────────────────────
   .post("/admin/login", async (c) => {
     const { username, password } = await c.req.json();
-    const adminUser = process.env.ADMIN_USERNAME || "superadmin";
-    const adminPass = process.env.ADMIN_PASSWORD || "admin123";
+    const adminUser = process.env.ADMIN_USERNAME || "atomadmin";
+    const adminPass = process.env.ADMIN_PASSWORD || "atom@2024";
     if (username !== adminUser || password !== adminPass) {
       return c.json({ error: "Invalid credentials" }, 401);
     }
