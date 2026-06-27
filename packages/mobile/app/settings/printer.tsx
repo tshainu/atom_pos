@@ -9,6 +9,7 @@ import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getUser } from "../../lib/auth";
 import { apiFetch, cachedFetchAsync } from "../../lib/api";
+import { cacheSet, cacheInvalidate } from "../../lib/cache";
 import { colors, spacing, radius } from "../../lib/theme";
 import { bleConnectAndPrint } from "../../lib/rawPrint";
 // Printer lib loaded lazily inside print/scan functions to avoid startup crash
@@ -166,6 +167,9 @@ export default function PrinterSettingsScreen() {
         body: JSON.stringify(settings),
       });
       if (data.error) { Alert.alert("Error", data.error); return; }
+      // Invalidate + update settings cache so pos.tsx reads fresh data on next focus
+      cacheInvalidate("settings");
+      if (data.settings) cacheSet(`settings/${user?.shopId}`, data);
       Alert.alert("Saved", "Printer settings saved.");
     } catch {
       Alert.alert("Error", "Failed to save settings");
