@@ -32,6 +32,7 @@ interface HeldBill {
 interface RecentBill {
   id: number; billNumber: string; netPay: number; paymentMethod: string;
   billType: string; customerName?: string | null; createdAt: any;
+  cashPaid?: number | null; customerPhone?: string | null;
 }
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -646,10 +647,11 @@ export default function POSScreen() {
         discount: 0,
         netPay: r.netPay,
         paymentMethod: r.paymentMethod,
-        cashPaid: 0,
-        balance: 0,
+        cashPaid: r.cashPaid ?? r.netPay,
+        balance: (r.cashPaid ?? r.netPay) - r.netPay,
         isCredit: r.billType === "credit",
         customerName: r.customerName,
+        customerPhone: r.customerPhone ?? undefined,
         shopName: user?.shopName ?? "",
         shopAddress: user?.shopAddress ?? "",
         shopPhone: user?.shopPhone ?? "",
@@ -669,7 +671,7 @@ export default function POSScreen() {
         paymentMethod: rd.paymentMethod,
         isCredit: rd.isCredit,
         customerName: rd.customerName ?? undefined,
-        customerPhone: (rd as any).customerPhone,
+        customerPhone: rd.customerPhone,
         creditDate: (rd as any).creditDate,
         items: rd.items,
         subtotal: rd.subtotal,

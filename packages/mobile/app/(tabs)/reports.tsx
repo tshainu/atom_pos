@@ -30,10 +30,10 @@ const RANGES: { key: RangeKey; label: string }[] = [
 
 const REPORT_TABS: { key: ReportTab; label: string; icon: string }[] = [
   { key: "sales", label: "Sales", icon: "trending-up-outline" },
-  { key: "partsales", label: "Partial", icon: "wallet-outline" },
   { key: "itemsales", label: "Item Sales", icon: "pricetag-outline" },
   { key: "items", label: "Items", icon: "cube-outline" },
   { key: "creditsales", label: "Credits", icon: "card-outline" },
+  { key: "partsales", label: "Partial", icon: "wallet-outline" },
   { key: "collections", label: "Collections", icon: "cash-outline" },
   { key: "staffsales", label: "Staff Sales", icon: "people-outline" },
 ];
@@ -150,9 +150,10 @@ function SalesReport({ user, range, customFrom, customTo, onData }: any) {
   const creditTotal = rows.filter((r) => r.paymentMethod === "credit").reduce((s, r) => s + (r.netPay ?? 0), 0);
 
   const getBadgeStyle = (pm: string) => {
-    if (pm === "credit") return { bg: "#fff7ed", color: "#EA580C" };
-    if (pm === "part") return { bg: "#fef3c7", color: "#D97706" };
-    return { bg: "#dcfce7", color: "#16a34a" };
+    if (pm === "credit") return { bg: "#EA580C", color: "#fff" };
+    if (pm === "part") return { bg: "#D97706", color: "#fff" };
+    if (pm === "card") return { bg: "#1976D2", color: "#fff" };
+    return { bg: "#16a34a", color: "#fff" };
   };
 
   return (
@@ -320,6 +321,7 @@ function ItemSalesReport({ user, range, customFrom, customTo, onData }: any) {
   }, [range, customFrom, customTo]);
 
   if (loading) return <ActivityIndicator style={{ padding: 30 }} color={colors.primary} />;
+  if (!data) return <Text style={styles.emptyText}>No item sales data</Text>;
   const rows: any[] = data?.rows ?? [];
 
   const totalQty = rows.reduce((s: number, r: any) => s + (Number(r.qty) || 0), 0);
@@ -545,9 +547,10 @@ function StaffSalesReport({ user, range, customFrom, customTo, onData }: any) {
     cachedFetchAsync(url).then((d: any) => { if (d && !d?.error) { setData(d); onData?.(d); } setLoading(false); });
   }, [range, customFrom, customTo]);
 
-  if (loading && !data) return <ActivityIndicator style={{ padding: 30 }} color={colors.primary} />;
+  if (loading) return <ActivityIndicator style={{ padding: 30 }} color={colors.primary} />;
+  if (!data) return <Text style={styles.emptyText}>No staff sales data</Text>;
   const rows: any[] = data?.rows ?? [];
-  if (!rows.length) return <Text style={styles.emptyText}>No staff sales data</Text>;
+  if (!rows.length) return <Text style={styles.emptyText}>No staff sales in this period</Text>;
 
   return (
     <View>

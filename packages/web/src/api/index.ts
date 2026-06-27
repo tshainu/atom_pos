@@ -690,8 +690,8 @@ The image should be square, 256x256 pixels.`;
       eq(schema.sales.shopId, shopId),
       eq(schema.sales.status, "completed"),
     ];
-    if (from) conditions.push(sql`created_at >= ${Math.floor(new Date(from + "T00:00:00").getTime() / 1000)}`);
-    if (to) conditions.push(sql`created_at <= ${Math.floor(new Date(to + "T23:59:59").getTime() / 1000)}`);
+    if (from) conditions.push(sql`created_at >= ${Math.floor(new Date(from.includes("T") ? from : from + "T00:00:00").getTime() / 1000)}`);
+    if (to) conditions.push(sql`created_at <= ${Math.floor(new Date(to.includes("T") ? to : to + "T23:59:59").getTime() / 1000)}`);
 
     const staffRows = await db
       .select({
@@ -827,7 +827,7 @@ The image should be square, 256x256 pixels.`;
       customerName: schema.sales.customerName,
       customerPhone: schema.sales.customerPhone,
       netPay: schema.sales.netPay,
-      cashPaid: schema.sales.cashPaid,
+      cashPaid: sql<number>`cash_paid`,
       createdAt: schema.sales.createdAt,
     }).from(schema.sales).where(and(...conditions)).orderBy(desc(schema.sales.createdAt));
 
