@@ -19,10 +19,8 @@ function getAdminCreds(): { username: string; passwordHash: string } {
       if (data.username && data.passwordHash) return data;
     }
   } catch {}
-  // Fallback to env or defaults
-  const username = process.env.ADMIN_USERNAME || "atomadmin";
-  const password = process.env.ADMIN_PASSWORD || "atom@2024";
-  return { username, passwordHash: hashPassword(password) };
+  // Hardcoded defaults — env vars intentionally ignored
+  return { username: "atomadmin", passwordHash: hashPassword("atom@2024") };
 }
 
 function saveAdminCreds(username: string, password: string) {
