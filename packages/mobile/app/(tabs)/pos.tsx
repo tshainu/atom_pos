@@ -1478,30 +1478,55 @@ export default function POSScreen() {
                 onPress={async () => {
                   if (!receiptData) return;
                   const ps = printerSettings;
+                  if (!ps.printerEnabled) {
+                    Alert.alert("Printer Disabled", "Enable the printer in Settings first.");
+                    return;
+                  }
+                  let text = "";
                   try {
-                    const text = buildReceiptText({
-                      shopName: receiptData.shopName,
-                      shopAddress: receiptData.shopAddress,
-                      shopPhone: receiptData.shopPhone,
-                      receiptHeader: ps.receiptHeader,
-                      receiptFooter: ps.receiptFooter,
-                      paperWidth: ps.paperWidth,
-                      billNumber: receiptData.billNumber,
-                      printedAt: receiptData.printedAt,
-                      paymentMethod: receiptData.paymentMethod,
+                    text = buildReceiptText({
+                      shopName: receiptData.shopName ?? "",
+                      shopAddress: receiptData.shopAddress ?? "",
+                      shopPhone: receiptData.shopPhone ?? "",
+                      receiptHeader: ps.receiptHeader ?? "",
+                      receiptFooter: ps.receiptFooter ?? "",
+                      paperWidth: ps.paperWidth ?? "80mm",
+                      billNumber: receiptData.billNumber ?? "---",
+                      printedAt: receiptData.printedAt ?? "",
+                      paymentMethod: receiptData.paymentMethod ?? "cash",
                       isCredit: receiptData.isCredit,
                       customerName: receiptData.customerName,
                       customerPhone: receiptData.customerPhone,
                       creditDate: receiptData.creditDate,
-                      items: receiptData.items,
-                      subtotal: receiptData.subtotal,
-                      discount: receiptData.discount,
-                      netPay: receiptData.netPay,
-                      cashPaid: receiptData.cashPaid,
-                      balance: receiptData.balance,
+                      items: (receiptData.items ?? []).map((it: any) => ({
+                        ...it,
+                        pricePerItem: it.pricePerItem ?? (it.qty ? it.total / it.qty : it.total) ?? 0,
+                        total: it.total ?? 0,
+                        qty: it.qty ?? 1,
+                        itemName: it.itemName ?? "",
+                      })),
+                      subtotal: receiptData.subtotal ?? 0,
+                      discount: receiptData.discount ?? 0,
+                      netPay: receiptData.netPay ?? 0,
+                      cashPaid: receiptData.cashPaid ?? 0,
+                      balance: receiptData.balance ?? 0,
                     });
+                  } catch (buildErr: any) {
+                    Alert.alert("Print Error", "Failed to build receipt: " + (buildErr?.message || "unknown error"));
+                    return;
+                  }
 
-                    const { BLEPrinter: BLE2, NetPrinter: Net2 } = getPrinter();
+                  let BLE2: any, Net2: any;
+                  try {
+                    const printer = getPrinter();
+                    BLE2 = printer.BLEPrinter;
+                    Net2 = printer.NetPrinter;
+                  } catch (modErr: any) {
+                    Alert.alert("Printer Error", "Printer module unavailable: " + (modErr?.message || "unknown error"));
+                    return;
+                  }
+
+                  try {
                     if (ps.printerType === "bluetooth") {
                       if (!ps.printerAddress) { Alert.alert("No Printer", "Select a Bluetooth printer in Settings first."); return; }
                       try {
