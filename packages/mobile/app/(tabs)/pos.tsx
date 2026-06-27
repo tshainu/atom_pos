@@ -1516,6 +1516,29 @@ export default function POSScreen() {
                     return;
                   }
 
+                  // Request BT permissions before touching native module — missing perms = native crash
+                  if (ps.printerType === "bluetooth") {
+                    const { PermissionsAndroid, Platform } = require("react-native");
+                    if (Platform.OS === "android") {
+                      try {
+                        const granted = await PermissionsAndroid.requestMultiple([
+                          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+                          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+                        ]);
+                        const ok =
+                          granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] === PermissionsAndroid.RESULTS.GRANTED &&
+                          granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] === PermissionsAndroid.RESULTS.GRANTED;
+                        if (!ok) {
+                          Alert.alert("Permission Required", "Bluetooth permission denied.\n\nGo to Settings → Apps → Permissions → Nearby Devices.");
+                          return;
+                        }
+                      } catch (permErr: any) {
+                        Alert.alert("Permission Error", permErr?.message || "Could not request Bluetooth permissions.");
+                        return;
+                      }
+                    }
+                  }
+
                   let BLE2: any, Net2: any;
                   try {
                     const printer = getPrinter();
