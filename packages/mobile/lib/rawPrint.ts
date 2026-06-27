@@ -67,6 +67,9 @@ export function buildRawBase64(text: string): string {
     } else if (line.includes("<CB>") && line.includes("</CB>")) {
       isCenter = true; isBold = true;
       line = line.replace(/<\/?CB>/g, "");
+    } else if (line.includes("<RB>") && line.includes("</RB>")) {
+      isRight = true; isBold = true;
+      line = line.replace(/<\/?RB>/g, "");
     } else {
       // Single tags
       if (line.includes("<B>") && line.includes("</B>")) {
@@ -190,6 +193,8 @@ export function buildReceiptText(rd: ReceiptData): string {
   const sep   = (ch: string) => ch.repeat(colWidth);
   const ctrB  = (s: string)  => `<CB>${s}</CB>`;
   const ctr   = (s: string)  => `<C>${s}</C>`;
+  const rgtB  = (s: string)  => `<RB>${s}</RB>`;
+  const rgt   = (s: string)  => `<R>${s}</R>`;
   const bold  = (s: string)  => `<B>${s}</B>`;
   const big   = (s: string)  => `<CD>${s}</CD>`;
 
@@ -218,12 +223,12 @@ export function buildReceiptText(rd: ReceiptData): string {
 
   let t = "";
 
-  // ── Header ──
-  t += ctrB(rd.shopName) + "\n";
-  if (rd.shopAddress) t += ctr(rd.shopAddress) + "\n";
-  if (rd.shopPhone)   t += ctr(rd.shopPhone) + "\n";
+  // ── Header (right-aligned) ──
+  t += rgtB(rd.shopName) + "\n";
+  if (rd.shopAddress) t += rgt(rd.shopAddress) + "\n";
+  if (rd.shopPhone)   t += rgt(rd.shopPhone) + "\n";
   t += sep("-") + "\n";
-  if (rd.receiptHeader) t += ctr(rd.receiptHeader) + "\n";
+  if (rd.receiptHeader) t += rgt(rd.receiptHeader) + "\n";
 
   // ── Invoice info ──
   t += lr("Invoice No.", billNo) + "\n";
