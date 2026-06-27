@@ -16,7 +16,7 @@ import { bleConnectAndPrint } from "../../lib/rawPrint";
 const getPrinter = () => require("react-native-thermal-receipt-printer-image-qr");
 
 type RangeKey = "today" | "yesterday" | "week" | "month" | "lastmonth" | "year" | "custom";
-type ReportTab = "sales" | "itemsales" | "items" | "creditsales" | "collections" | "staffsales";
+type ReportTab = "sales" | "partsales" | "itemsales" | "items" | "creditsales" | "collections" | "staffsales";
 
 const RANGES: { key: RangeKey; label: string }[] = [
   { key: "today", label: "Today" },
@@ -30,6 +30,7 @@ const RANGES: { key: RangeKey; label: string }[] = [
 
 const REPORT_TABS: { key: ReportTab; label: string; icon: string }[] = [
   { key: "sales", label: "Sales", icon: "trending-up-outline" },
+  { key: "partsales", label: "Partial", icon: "wallet-outline" },
   { key: "itemsales", label: "Item Sales", icon: "pricetag-outline" },
   { key: "items", label: "Items", icon: "cube-outline" },
   { key: "creditsales", label: "Credits", icon: "card-outline" },
@@ -216,6 +217,91 @@ function SalesReport({ user, range, customFrom, customTo, onData }: any) {
   );
 }
 
+// ── Partial Sales Report ──────────────────────────────────────────────
+function PartialSalesReport({ user, range, customFrom, customTo, onData }: any) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    setData(null);
+    const { from, to } = rangeToDates(range, customFrom, customTo);
+    let url = `reports/partial-sales?shopId=${user.shopId}`;
+    if (from && to) url += `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    cachedFetchAsync(url).then((d: any) => {
+      if (d && !d?.error) { setData(d); onData?.(d); }
+      setLoading(false);
+    });
+  }, [range, customFrom, customTo]);
+
+  if (loading) return <ActivityIndicator style={{ padding: 30 }} color={colors.primary} />;
+  const rows: any[] = data?.rows ?? [];
+
+  return (
+    <View>
+      <View style={styles.miniCardsRow}>
+        <View style={[styles.miniCard, { backgroundColor: "#D97706" }]}>
+          <Text style={styles.miniCardVal}>Rs.{(data?.totalNetPay ?? 0).toLocaleString()}</Text>
+          <Text style={styles.miniCardLabel}>Total Invoiced</Text>
+        </View>
+        <View style={[styles.miniCard, { backgroundColor: "#16a34a" }]}>
+          <Text style={styles.miniCardVal}>Rs.{(data?.totalCashPaid ?? 0).toLocaleString()}</Text>
+          <Text style={styles.miniCardLabel}>Cash Received</Text>
+        </View>
+      </View>
+      <View style={[styles.miniCardsRow, { paddingTop: 0 }]}>
+        <View style={[styles.miniCard, { backgroundColor: "#e53935", flex: 1 }]}>
+          <Text style={styles.miniCardVal}>Rs.{(data?.totalDue ?? 0).toLocaleString()}</Text>
+          <Text style={styles.miniCardLabel}>Balance Due</Text>
+        </View>
+        <View style={[styles.miniCard, { backgroundColor: "#0D9488" }]}>
+          <Text style={styles.miniCardVal}>{rows.length}</Text>
+          <Text style={styles.miniCardLabel}>Bills</Text>
+        </View>
+      </View>
+
+      {rows.length === 0 ? (
+        <Text style={styles.emptyText}>No partial sales in this period</Text>
+      ) : (
+        <View style={styles.tableCard}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.thCell, { flex: 1.2 }]}>Date</Text>
+            <Text style={[styles.thCell, { flex: 1.5 }]}>Customer</Text>
+            <Text style={[styles.thCell, { flex: 1, textAlign: "right" }]}>Invoice</Text>
+            <Text style={[styles.thCell, { flex: 1, textAlign: "right" }]}>Paid</Text>
+            <Text style={[styles.thCell, { flex: 0.9, textAlign: "right" }]}>Due</Text>
+          </View>
+          {rows.map((s: any, i: number) => {
+            const due = (s.netPay ?? 0) - (s.cashPaid ?? s.cash_paid ?? 0);
+            return (
+              <View key={s.id ?? i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
+                <Text style={[styles.tdCell, { flex: 1.2 }]}>{formatDate(s.createdAt ?? s.created_at)}</Text>
+                <View style={{ flex: 1.5 }}>
+                  <Text style={[styles.tdCell, { fontWeight: "600" }]} numberOfLines={1}>
+                    {s.customerName ?? s.customer_name ?? "—"}
+                  </Text>
+                  {(s.customerPhone ?? s.customer_phone) ? (
+                    <Text style={{ fontSize: 10, color: "#888" }}>{s.customerPhone ?? s.customer_phone}</Text>
+                  ) : null}
+                </View>
+                <Text style={[styles.tdCell, { flex: 1, textAlign: "right" }]}>
+                  Rs.{(s.netPay ?? 0).toLocaleString()}
+                </Text>
+                <Text style={[styles.tdCell, { flex: 1, textAlign: "right", color: "#16a34a", fontWeight: "700" }]}>
+                  Rs.{(s.cashPaid ?? s.cash_paid ?? 0).toLocaleString()}
+                </Text>
+                <Text style={[styles.tdCell, { flex: 0.9, textAlign: "right", color: "#e53935", fontWeight: "700" }]}>
+                  Rs.{due.toLocaleString()}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ── Item Sales Report ─────────────────────────────────────────────────
 function ItemSalesReport({ user, range, customFrom, customTo, onData }: any) {
   const [data, setData] = useState<any>(null);
@@ -223,34 +309,60 @@ function ItemSalesReport({ user, range, customFrom, customTo, onData }: any) {
 
   useEffect(() => {
     setLoading(true);
+    setData(null);
     const { from, to } = rangeToDates(range, customFrom, customTo);
     let url = `reports/item-sales?shopId=${user.shopId}`;
-    if (from && to) url += `&from=${from}&to=${to}`;
-    cachedFetchAsync(url).then((d: any) => { if (d && !d?.error) { setData(d); onData?.(d); } setLoading(false); });
+    if (from && to) url += `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    cachedFetchAsync(url).then((d: any) => {
+      if (d && !d?.error) { setData(d); onData?.(d); }
+      setLoading(false);
+    });
   }, [range, customFrom, customTo]);
 
-  if (loading && !data) return <ActivityIndicator style={{ padding: 30 }} color={colors.primary} />;
+  if (loading) return <ActivityIndicator style={{ padding: 30 }} color={colors.primary} />;
   const rows: any[] = data?.rows ?? [];
-  if (!rows.length) return <Text style={styles.emptyText}>No data</Text>;
+
+  const totalQty = rows.reduce((s: number, r: any) => s + (Number(r.qty) || 0), 0);
+  const totalAmt = rows.reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);
 
   return (
-    <View style={styles.tableCard}>
-      <View style={styles.tableHeader}>
-        <Text style={[styles.thCell, { flex: 1.2 }]}>Date</Text>
-        <Text style={[styles.thCell, { flex: 1.5 }]}>Item</Text>
-        <Text style={[styles.thCell, { flex: 0.6, textAlign: "center" }]}>Qty</Text>
-        <Text style={[styles.thCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
-      </View>
-      {rows.map((r: any, i: number) => (
-        <View key={i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
-          <Text style={[styles.tdCell, { flex: 1.2 }]}>{formatDate(r.created_at ?? r.createdAt)}</Text>
-          <Text style={[styles.tdCell, { flex: 1.5 }]} numberOfLines={1}>{r.item_name ?? r.itemName}</Text>
-          <Text style={[styles.tdCell, { flex: 0.6, textAlign: "center", fontWeight: "700" }]}>{r.qty}</Text>
-          <Text style={[styles.tdCell, { flex: 1, textAlign: "right", fontWeight: "700", color: colors.primary }]}>
-            Rs.{Number(r.total ?? 0).toLocaleString()}
-          </Text>
+    <View>
+      <View style={styles.miniCardsRow}>
+        <View style={[styles.miniCard, { backgroundColor: colors.primary }]}>
+          <Text style={styles.miniCardVal}>{rows.length}</Text>
+          <Text style={styles.miniCardLabel}>Line Items</Text>
         </View>
-      ))}
+        <View style={[styles.miniCard, { backgroundColor: "#0D9488" }]}>
+          <Text style={styles.miniCardVal}>{totalQty}</Text>
+          <Text style={styles.miniCardLabel}>Total Qty</Text>
+        </View>
+        <View style={[styles.miniCard, { backgroundColor: "#16a34a" }]}>
+          <Text style={styles.miniCardVal}>Rs.{totalAmt.toLocaleString()}</Text>
+          <Text style={styles.miniCardLabel}>Total Amount</Text>
+        </View>
+      </View>
+      {rows.length === 0 ? (
+        <Text style={styles.emptyText}>No item sales in this period</Text>
+      ) : (
+        <View style={styles.tableCard}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.thCell, { flex: 1.2 }]}>Date</Text>
+            <Text style={[styles.thCell, { flex: 1.5 }]}>Item</Text>
+            <Text style={[styles.thCell, { flex: 0.6, textAlign: "center" }]}>Qty</Text>
+            <Text style={[styles.thCell, { flex: 1, textAlign: "right" }]}>Amount</Text>
+          </View>
+          {rows.map((r: any, i: number) => (
+            <View key={i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
+              <Text style={[styles.tdCell, { flex: 1.2 }]}>{formatDate(r.created_at ?? r.createdAt)}</Text>
+              <Text style={[styles.tdCell, { flex: 1.5 }]} numberOfLines={1}>{r.item_name ?? r.itemName}</Text>
+              <Text style={[styles.tdCell, { flex: 0.6, textAlign: "center", fontWeight: "700" }]}>{r.qty}</Text>
+              <Text style={[styles.tdCell, { flex: 1, textAlign: "right", fontWeight: "700", color: colors.primary }]}>
+                Rs.{Number(r.total ?? 0).toLocaleString()}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -490,7 +602,7 @@ function buildReportText(tab: ReportTab, data: any, range: string, shopName: str
   const pad = is80 ? 24 : 16;
 
   const tabLabel: Record<ReportTab, string> = {
-    sales: "SALES REPORT", itemsales: "ITEM SALES REPORT", items: "ITEMS REPORT",
+    sales: "SALES REPORT", partsales: "PARTIAL SALES REPORT", itemsales: "ITEM SALES REPORT", items: "ITEMS REPORT",
     creditsales: "CREDIT SALES REPORT", collections: "COLLECTIONS REPORT", staffsales: "STAFF SALES REPORT",
   };
 
@@ -527,6 +639,28 @@ function buildReportText(tab: ReportTab, data: any, range: string, shopName: str
         const type = (r.paymentMethod ?? "cash").slice(0, tw).padEnd(tw);
         const amt = `Rs.${(r.netPay ?? 0).toLocaleString()}`.padStart(aw);
         t += bill + type + amt + "\n";
+      });
+    }
+  } else if (tab === "partsales") {
+    const rows: any[] = data?.rows ?? [];
+    t += BOLD_ON + "Total Invoiced:".padEnd(pad) + `Rs.${(data?.totalNetPay ?? 0).toLocaleString()}` + BOLD_OFF + "\n";
+    t += "Cash Received:".padEnd(pad) + `Rs.${(data?.totalCashPaid ?? 0).toLocaleString()}\n`;
+    t += "Balance Due:".padEnd(pad) + `Rs.${(data?.totalDue ?? 0).toLocaleString()}\n`;
+    t += "Bills:".padEnd(pad) + `${rows.length}\n`;
+    if (rows.length > 0) {
+      t += SEP_LIGHT + "\n";
+      const nw = is80 ? 14 : 10;
+      const aw = is80 ? 10 : 7;
+      const pw = colWidth - nw - aw - aw - 3;
+      t += "Customer".padEnd(nw) + "Invoice".padEnd(aw) + "Paid".padEnd(aw) + "Due".padStart(pw) + "\n";
+      t += SEP_LIGHT + "\n";
+      rows.forEach((s: any) => {
+        const due = (s.netPay ?? 0) - (s.cashPaid ?? s.cash_paid ?? 0);
+        const name = (s.customerName ?? s.customer_name ?? "—").slice(0, nw).padEnd(nw);
+        const inv = `Rs.${(s.netPay ?? 0).toLocaleString()}`.padEnd(aw);
+        const paid = `Rs.${(s.cashPaid ?? 0).toLocaleString()}`.padEnd(aw);
+        const dueStr = `Rs.${due.toLocaleString()}`.padStart(pw);
+        t += name + inv + paid + dueStr + "\n";
       });
     }
   } else if (tab === "itemsales") {
@@ -630,7 +764,7 @@ function buildReportText(tab: ReportTab, data: any, range: string, shopName: str
 // ── PDF Export ────────────────────────────────────────────────────────
 function buildPdfHtml(tab: ReportTab, data: any, range: string, shopName: string): string {
   const tabLabel: Record<ReportTab, string> = {
-    sales: "Sales Report", itemsales: "Item Sales Report", items: "Items Report",
+    sales: "Sales Report", partsales: "Partial Sales Report", itemsales: "Item Sales Report", items: "Items Report",
     creditsales: "Credit Sales Report", collections: "Collections Report", staffsales: "Staff Sales Report",
   };
   const title = tabLabel[tab] ?? "Report";
@@ -678,6 +812,25 @@ function buildPdfHtml(tab: ReportTab, data: any, range: string, shopName: string
       body += `<tr><td>${formatDate(s.createdAt ?? s.created_at)}</td><td>${(s.billNumber ?? s.bill_number ?? "").replace("BILL-", "")}</td>
         <td class="right bold" style="color:#1d4ed8">Rs.${(s.netPay ?? s.net_pay ?? 0).toLocaleString()}</td>
         <td class="center">${s.paymentMethod ?? "cash"}</td></tr>`;
+    });
+    body += `</table>`;
+  } else if (tab === "partsales") {
+    const rows: any[] = data?.rows ?? [];
+    body += `<div class="summary">
+      <div class="card" style="background:#D97706"><div class="cv">Rs.${(data?.totalNetPay ?? 0).toLocaleString()}</div><div class="cl">Total Invoiced</div></div>
+      <div class="card green"><div class="cv">Rs.${(data?.totalCashPaid ?? 0).toLocaleString()}</div><div class="cl">Cash Received</div></div>
+      <div class="card red"><div class="cv">Rs.${(data?.totalDue ?? 0).toLocaleString()}</div><div class="cl">Balance Due</div></div>
+      <div class="card teal"><div class="cv">${rows.length}</div><div class="cl">Bills</div></div>
+    </div>`;
+    body += `<table><tr><th>Date</th><th>Customer</th><th>Phone</th><th class="right">Invoice</th><th class="right">Paid</th><th class="right">Due</th></tr>`;
+    rows.forEach(s => {
+      const due = (s.netPay ?? 0) - (s.cashPaid ?? s.cash_paid ?? 0);
+      body += `<tr><td>${formatDate(s.createdAt ?? s.created_at)}</td>
+        <td>${s.customerName ?? s.customer_name ?? "—"}</td>
+        <td>${s.customerPhone ?? s.customer_phone ?? "—"}</td>
+        <td class="right">Rs.${(s.netPay ?? 0).toLocaleString()}</td>
+        <td class="right bold" style="color:#16a34a">Rs.${(s.cashPaid ?? s.cash_paid ?? 0).toLocaleString()}</td>
+        <td class="right bold" style="color:#e53935">Rs.${due.toLocaleString()}</td></tr>`;
     });
     body += `</table>`;
   } else if (tab === "itemsales") {
@@ -930,6 +1083,7 @@ export default function ReportsScreen() {
         {/* Report content */}
         <View style={{ padding: spacing.md, paddingTop: spacing.sm }}>
           {activeTab === "sales" && <SalesReport user={user} range={range} customFrom={customFrom} customTo={customTo} onData={setReportData} />}
+          {activeTab === "partsales" && <PartialSalesReport user={user} range={range} customFrom={customFrom} customTo={customTo} onData={setReportData} />}
           {activeTab === "itemsales" && <ItemSalesReport user={user} range={range} customFrom={customFrom} customTo={customTo} onData={setReportData} />}
           {activeTab === "items" && <ItemsReport user={user} range={range} customFrom={customFrom} customTo={customTo} onData={setReportData} />}
           {activeTab === "creditsales" && <CreditSalesReport user={user} range={range} customFrom={customFrom} customTo={customTo} onData={setReportData} />}

@@ -304,6 +304,15 @@ export function buildReceiptText(rd: ReceiptData): string {
     }
   }
 
+  if (!rd.isCredit && rd.paymentMethod === "part" && rd.customerName) {
+    t += sep("-") + "\n";
+    t += ctrB("** PARTIAL PAYMENT **") + "\n";
+    t += lr("Customer:", rd.customerName) + "\n";
+    if (rd.customerPhone) t += lr("Phone:", rd.customerPhone) + "\n";
+    const balDue = rd.netPay - rd.cashPaid;
+    if (balDue > 0) t += bold(lr("Balance Due:", `Rs ${balDue.toLocaleString()}.00`)) + "\n";
+  }
+
   if (rd.isCredit) {
     t += sep("-") + "\n";
     t += ctrB("** CREDIT SALE **") + "\n";

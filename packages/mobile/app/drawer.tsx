@@ -58,7 +58,7 @@ export default function DrawerScreen() {
       items: [
         { icon: "cart-outline", label: "New Bill", onPress: () => router.push("/(tabs)/pos") },
         { icon: "document-text-outline", label: "My Sales", onPress: () => router.push("/(tabs)/reports") },
-        { icon: "trending-up-outline", label: "My Commission", onPress: () => router.push("/(tabs)/reports") },
+        { icon: "ribbon-outline", label: "My Commission", onPress: () => router.push("/commission") },
       ],
     },
 

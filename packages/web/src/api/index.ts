@@ -724,6 +724,119 @@ The image should be square, 256x256 pixels.`;
     return c.json({ rows, grandTotal }, 200);
   })
 
+  // ── Report: Commission Report ─────────────────────────────────────────────
+  .get("/reports/commission", async (c) => {
+    const shopId = Number(c.req.query("shopId"));
+    const userId = c.req.query("userId") ? Number(c.req.query("userId")) : null;
+    const from = c.req.query("from");
+    const to = c.req.query("to");
+    if (!shopId) return c.json({ error: "shopId required" }, 400);
+
+    const conditions: any[] = [
+      eq(schema.sales.shopId, shopId),
+      eq(schema.sales.status, "completed"),
+    ];
+    if (from) conditions.push(sql`${schema.sales.createdAt} >= ${Math.floor(new Date(from).getTime() / 1000)}`);
+    if (to) conditions.push(sql`${schema.sales.createdAt} <= ${Math.floor(new Date(to).getTime() / 1000)}`);
+    if (userId) conditions.push(eq(schema.sales.userId, userId));
+
+    // Get all sale items with their sale + item commission info
+    const saleItemRows = await db
+      .select({
+        saleId: schema.sales.id,
+        soldBy: sql<number>`coalesce(${schema.sales.soldBy}, ${schema.sales.userId})`,
+        billNumber: schema.sales.billNumber,
+        paymentMethod: schema.sales.paymentMethod,
+        cashPaid: schema.sales.cashPaid,
+        netPay: schema.sales.netPay,
+        itemName: schema.saleItems.itemName,
+        qty: schema.saleItems.qty,
+        total: schema.saleItems.total,
+        itemCommission: schema.items.commission,
+        createdAt: schema.sales.createdAt,
+      })
+      .from(schema.saleItems)
+      .innerJoin(schema.sales, eq(schema.saleItems.saleId, schema.sales.id))
+      .leftJoin(schema.items, and(
+        eq(schema.items.shopId, shopId),
+        eq(schema.items.name, schema.saleItems.itemName),
+      ))
+      .where(and(...conditions))
+      .orderBy(desc(schema.sales.createdAt));
+
+    // Group by staff member
+    const staffMap = new Map<number, any>();
+    for (const row of saleItemRows) {
+      const sid = row.soldBy;
+      if (!staffMap.has(sid)) {
+        staffMap.set(sid, { userId: sid, items: [], totalSales: 0, totalCommission: 0 });
+      }
+      const entry = staffMap.get(sid)!;
+      const commRate = (row.itemCommission ?? 0) / 100;
+      const commAmt = Number(row.total ?? 0) * commRate;
+      entry.items.push({
+        saleId: row.saleId,
+        billNumber: row.billNumber,
+        itemName: row.itemName,
+        qty: row.qty,
+        total: row.total,
+        commissionRate: row.itemCommission ?? 0,
+        commissionAmount: commAmt,
+        createdAt: row.createdAt,
+      });
+      entry.totalSales += Number(row.total ?? 0);
+      entry.totalCommission += commAmt;
+    }
+
+    // Enrich with user info
+    const rows = await Promise.all(
+      Array.from(staffMap.entries()).map(async ([uid, entry]) => {
+        const user = await db.select().from(schema.users).where(eq(schema.users.id, uid)).get();
+        return {
+          ...entry,
+          name: user?.fullName ?? "Unknown",
+          role: user?.role ?? "—",
+          userCommissionRate: user?.commission ?? 0,
+        };
+      })
+    );
+
+    const grandTotal = rows.reduce((s, r) => s + r.totalSales, 0);
+    const grandCommission = rows.reduce((s, r) => s + r.totalCommission, 0);
+    return c.json({ rows, grandTotal, grandCommission }, 200);
+  })
+
+  // ── Report: Partial Sales Report ─────────────────────────────────────────
+  .get("/reports/partial-sales", async (c) => {
+    const shopId = Number(c.req.query("shopId"));
+    const from = c.req.query("from");
+    const to = c.req.query("to");
+    if (!shopId) return c.json({ error: "shopId required" }, 400);
+
+    const conditions: any[] = [
+      eq(schema.sales.shopId, shopId),
+      eq(schema.sales.status, "completed"),
+      eq(schema.sales.paymentMethod, "part"),
+    ];
+    if (from) conditions.push(sql`${schema.sales.createdAt} >= ${Math.floor(new Date(from).getTime() / 1000)}`);
+    if (to) conditions.push(sql`${schema.sales.createdAt} <= ${Math.floor(new Date(to).getTime() / 1000)}`);
+
+    const rows = await db.select({
+      id: schema.sales.id,
+      billNumber: schema.sales.billNumber,
+      customerName: schema.sales.customerName,
+      customerPhone: schema.sales.customerPhone,
+      netPay: schema.sales.netPay,
+      cashPaid: schema.sales.cashPaid,
+      createdAt: schema.sales.createdAt,
+    }).from(schema.sales).where(and(...conditions)).orderBy(desc(schema.sales.createdAt));
+
+    const totalNetPay = rows.reduce((s, r) => s + (r.netPay ?? 0), 0);
+    const totalCashPaid = rows.reduce((s, r) => s + (r.cashPaid ?? 0), 0);
+    const totalDue = totalNetPay - totalCashPaid;
+    return c.json({ rows, totalNetPay, totalCashPaid, totalDue }, 200);
+  })
+
   // ── Today's Dashboard Summary ─────────────────────────────────────────────
   .get("/reports/today", async (c) => {
     const shopId = Number(c.req.query("shopId"));

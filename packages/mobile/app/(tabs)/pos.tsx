@@ -307,7 +307,13 @@ export default function POSScreen() {
       Customer: <b>${rd.customerName ?? ""}</b><br/>
       ${rd.customerPhone ? `Phone: ${rd.customerPhone}<br/>` : ""}
       ${rd.creditDate ? `Promised Date: <b>${rd.creditDate}</b>` : ""}
-    </div>` : ""}
+    </div>` : (rd.paymentMethod === "part" && rd.customerName ? `
+    <div class="credit" style="background:#FFF8E1;border-left:3px solid #D97706;">
+      <b>⚠ PARTIAL PAYMENT</b><br/>
+      Customer: <b>${rd.customerName}</b><br/>
+      ${rd.customerPhone ? `Phone: ${rd.customerPhone}<br/>` : ""}
+      Balance Due: <b>Rs.${Math.abs(rd.balance ?? 0).toLocaleString()}</b>
+    </div>` : "")}
     <div class="sep"></div>
     <div class="footer">Thank you! Come again<br/>ATOM POS by AxisXNOR</div>
     </body></html>`;
