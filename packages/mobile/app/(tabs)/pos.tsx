@@ -61,7 +61,7 @@ export default function POSScreen() {
   // Qty/Price modal
   const [qtyModal, setQtyModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [modalQty, setModalQty] = useState(1);
+  const [modalQty, setModalQty] = useState("1");
   const [modalPriceGroup, setModalPriceGroup] = useState<PriceGroup | null>(null);
   const [numpadValue, setNumpadValue] = useState("");
 
@@ -212,7 +212,7 @@ export default function POSScreen() {
 
   const openItemModal = (item: Item) => {
     setSelectedItem(item);
-    setModalQty(1);
+    setModalQty("1");
     setModalPriceGroup(item.priceGroups[0] ?? null);
     setNumpadValue("");
     setQtyModal(true);
@@ -228,15 +228,16 @@ export default function POSScreen() {
     if (!selectedItem || !modalPriceGroup) return;
     const price = numpadValue ? parseFloat(numpadValue) : modalPriceGroup.price;
     const existing = bill.findIndex((b) => b.itemId === selectedItem.id && b.pricePerItem === price);
+    const qty = parseFloat(modalQty) || 1;
     if (existing >= 0) {
       const updated = [...bill];
-      updated[existing].qty += modalQty;
+      updated[existing].qty += qty;
       updated[existing].total = updated[existing].qty * price;
       setBill(updated);
     } else {
       setBill((b) => [...b, {
         itemId: selectedItem.id, itemName: selectedItem.name,
-        qty: modalQty, pricePerItem: price, total: modalQty * price,
+        qty, pricePerItem: price, total: qty * price,
       }]);
     }
     setQtyModal(false);
@@ -923,13 +924,32 @@ export default function POSScreen() {
                   : <Image source={CATEGORY_ICONS[selectedItem?.category ?? ""] ?? CATEGORY_ICONS.default} style={styles.itemIconImg} />}
               </View>
               <Text style={styles.modalItemName}>{selectedItem?.name}</Text>
-              <TouchableOpacity onPress={() => setModalQty((q) => Math.max(1, q - 1))}>
+              <TouchableOpacity onPress={() => {
+                const v = parseFloat(modalQty) || 1;
+                const next = Math.max(0.01, parseFloat((v - 1).toFixed(4)));
+                setModalQty(Number.isInteger(next) ? String(next) : String(next));
+              }}>
                 <Ionicons name="remove-circle-outline" size={32} color="#333" />
               </TouchableOpacity>
-              <View style={styles.qtyBox}>
-                <Text style={styles.qtyBoxText}>{modalQty}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setModalQty((q) => q + 1)}>
+              <TextInput
+                style={styles.qtyBox}
+                value={modalQty}
+                onChangeText={(t) => {
+                  // allow digits, single dot, leading dot
+                  const cleaned = t.replace(/[^0-9.]/g, "");
+                  const parts = cleaned.split(".");
+                  const safe = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : cleaned;
+                  setModalQty(safe);
+                }}
+                keyboardType="decimal-pad"
+                textAlign="center"
+                selectTextOnFocus
+                maxLength={8}
+              />
+              <TouchableOpacity onPress={() => {
+                const v = parseFloat(modalQty) || 0;
+                setModalQty(String(v + 1));
+              }}>
                 <Ionicons name="add-circle-outline" size={32} color="#333" />
               </TouchableOpacity>
             </View>
@@ -943,7 +963,7 @@ export default function POSScreen() {
                 <Text style={[styles.pricePanelLabel, { marginTop: 8 }]}>Total price</Text>
                 <View style={[styles.pricePanelBox, { backgroundColor: "#e8e8e8" }]}>
                   <Text style={styles.pricePanelVal}>
-                    {(modalQty * (numpadValue ? parseFloat(numpadValue) || 0 : modalPriceGroup?.price ?? 0)).toLocaleString()}
+                    {((parseFloat(modalQty) || 0) * (numpadValue ? parseFloat(numpadValue) || 0 : modalPriceGroup?.price ?? 0)).toLocaleString()}
                   </Text>
                 </View>
               </View>
@@ -1933,7 +1953,7 @@ const styles = StyleSheet.create({
   },
   modalItemIconBox: { width: 40, height: 40, borderRadius: 8, backgroundColor: "#fff8e1", alignItems: "center", justifyContent: "center" },
   modalItemName: { flex: 1, fontSize: 15, fontWeight: "700", color: "#222" },
-  qtyBox: { minWidth: 40, height: 36, borderWidth: 1.5, borderColor: "#ccc", borderRadius: 8, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+  qtyBox: { minWidth: 52, height: 40, borderWidth: 1.5, borderColor: "#f59e0b", borderRadius: 8, paddingHorizontal: 8, fontSize: 18, fontWeight: "700", color: "#222", textAlign: "center" },
   qtyBoxText: { fontSize: 18, fontWeight: "700", color: "#222" },
   pricePanelRow: { flexDirection: "row", gap: 10, marginBottom: 12, borderWidth: 1, borderColor: "#ddd", borderRadius: 12, padding: 10 },
   priceLeftPanel: { flex: 1 },
