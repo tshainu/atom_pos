@@ -19,8 +19,9 @@ function getAdminCreds(): { username: string; passwordHash: string } {
       if (data.username && data.passwordHash) return data;
     }
   } catch {}
-  // Hardcoded defaults — env vars intentionally ignored
-  return { username: "atomadmin", passwordHash: hashPassword("atom@2024") };
+  // HARDCODED — no env vars
+  return { username: "atomadmin", passwordHash: "e2698622ac59cf3b825f2c1e6fecff7151e9141af0af4e6a8edb0235ded9275f" };
+  // above hash = sha256("atom@2024")
 }
 
 function saveAdminCreds(username: string, password: string) {
